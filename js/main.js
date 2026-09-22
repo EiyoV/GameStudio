@@ -1,3 +1,234 @@
+// 系统内置兜底放置挂机游戏模板
+const IDLE_GAME_TEMPLATE_HTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>放置挂机游戏</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif;}
+body{background:#0f121b;color:#e4e8f1;padding:16px;max-width:920px;margin:0 auto;}
+.panel{background:#191e2d;border:1px solid #2c3348;border-radius:12px;padding:16px;margin-bottom:14px;}
+h2{margin-bottom:10px;font-size:16px;color:#fff;}
+button{padding:9px 14px;border-radius:8px;border:none;background:#5c78ff;color:#fff;margin:4px;cursor:pointer;font-size:13px;}
+button:hover{background:#708aff;}
+button.danger{background:#c83c3c;}
+textarea,select{background:#242a3b;color:#fff;border:1px solid #384059;padding:8px;border-radius:8px;font-size:13px;}
+.info-line{margin:6px 0;font-size:13px;}
+.bag-item{display:inline-block;background:#242a3b;padding:6px 10px;border-radius:6px;margin:4px;font-size:12px;}
+</style>
+</head>
+<body>
+<h1>🎮放置挂机游戏</h1>
+<div class="panel">
+<h2>角色状态</h2>
+<div id="playerStatus"></div>
+</div>
+<div class="panel">
+<h2>挂机战斗</h2>
+<div id="battleInfo"></div>
+<button id="btnNextStage">手动下一关</button>
+</div>
+<div class="panel">
+<h2>背包</h2>
+<div id="bagBox"></div>
+</div>
+<div class="panel">
+<h2>操作</h2>
+<button onclick="savePlayerData()">保存进度</button>
+<button class="danger" onclick="resetPlayer()">重置游戏存档</button>
+</div>
+
+<script>
+let gameData = null;
+let player = null;
+let battleTimer = null;
+
+async function loadGameData(){
+  try{
+    const res = await fetch("./game-data.json");
+    if(!res.ok) throw new Error("not found");
+    gameData = await res.json();
+  }catch(e){
+    document.body.innerHTML = "<div style='padding:30px;text-align:center;color:#ff8888;'><h2>❌缺少game‑data.json游戏资源文件</h2><p>请确认打包的zip完整，此文件是编辑器导出的游戏数据</p></div>";
+    return;
+  }
+  loadPlayerData();
+  startBattleLoop();
+  renderUi();
+}
+
+function getDefaultPlayer(){
+  const cfg = gameData.config;
+  return {
+    level: cfg.startLevel||1,
+    hp: cfg.startHp||100,
+    maxHp: cfg.startHp||100,
+    gold: cfg.startGold||0,
+    exp:0,
+    bag:[],
+    battleIndex:0,
+    lastOnlineTime:Date.now()
+  };
+}
+function loadPlayerData(){
+  const raw = localStorage.getItem("idleGameSave");
+  if(!raw){
+    player = getDefaultPlayer();
+    return;
+  }
+  try{
+    player = JSON.parse(raw);
+  }catch{
+    player = getDefaultPlayer();
+  }
+  calcOfflineReward();
+}
+function savePlayerData(){
+  player.lastOnlineTime = Date.now();
+  localStorage.setItem("idleGameSave",JSON.stringify(player));
+}
+function resetPlayer(){
+  if(!confirm("确定清空全部游戏进度？")) return;
+  localStorage.removeItem("idleGameSave");
+  player = getDefaultPlayer();
+  renderUi();
+}
+
+function getGoldPerSec(){
+  const cfg = gameData.config;
+  return cfg.baseGoldPerSec * Math.pow(player.level, cfg.levelRate||1.15);
+}
+function calcOfflineReward(){
+  const cfg = gameData.config;
+  if(!cfg.enableOffline) return;
+  const now = Date.now();
+  const deltaMs = now - player.lastOnlineTime;
+  const maxMs = cfg.maxOfflineSec * 1000;
+  const realDelta = Math.min(deltaMs,maxMs);
+  const sec = realDelta /1000;
+  const goldAdd = sec * getGoldPerSec();
+  player.gold += goldAdd;
+}
+
+function getMonsterById(id){
+  return gameData.monsters.find(m=>m.id===id);
+}
+function getItemById(id){
+  return gameData.items.find(it=>it.id===id);
+}
+function startBattleLoop(){
+  const cfg = gameData.config;
+  if(battleTimer) clearInterval(battleTimer);
+  battleTimer = setInterval(battleTick, cfg.battleTickMs||2000);
+}
+function battleTick(){
+  const cfg = gameData.config;
+  const idList = cfg.battleMonsterIdList||[];
+  if(idList.length===0) return;
+  const mid = idList[player.battleIndex];
+  const monster = getMonsterById(mid);
+  if(!monster) return;
+
+  const playerDmg = player.level * 8;
+  const monsterDmg = monster.atk;
+
+  if(playerDmg > monster.def){
+    player.gold += monster.gold||0;
+    player.exp += monster.exp||0;
+    if(monster.dropItemIds){
+      monster.dropItemIds.forEach(dropId=>{
+        const it = getItemById(dropId);
+        if(it) player.bag.push({...it});
+      });
+    }
+    player.battleIndex++;
+    if(player.battleIndex >= idList.length){
+      player.battleIndex = 0;
+    }
+  }else{
+    if(cfg.deathResetStage){
+      player.battleIndex =0;
+    }
+  }
+  savePlayerData();
+  renderUi();
+}
+
+function renderUi(){
+  const cfg = gameData.config;
+  const perSec = getGoldPerSec().toFixed(1);
+  document.getElementById("playerStatus").innerHTML = \`
+<div>等级:\${player.level}/\${cfg.maxLevel} | 每秒金币:\${perSec}</div>
+<div>HP:\${Math.floor(player.hp)}/\${player.maxHp} | 金币:\${Math.floor(player.gold)} | EXP:\${Math.floor(player.exp)}</div>
+<button onclick="levelUp()">升级(消耗\${Math.floor(player.level*120)}金币)</button>
+\`;
+  const idList = cfg.battleMonsterIdList||[];
+  const mid = idList[player.battleIndex];
+  const m = getMonsterById(mid);
+  if(m){
+    document.getElementById("battleInfo").innerHTML = \`
+<div>当前挑战:【\${m.name}】</div>
+<div>怪物HP:\${m.hp} ATK:\${m.atk} DEF:\${m.def||0}</div>
+<div>击败奖励:金币\${m.gold} EXP\${m.exp}</div>
+\`;
+  }else{
+    document.getElementById("battleInfo").innerText = "无怪物";
+  }
+  const bagBox = document.getElementById("bagBox");
+  if(player.bag.length===0){
+    bagBox.innerText = "背包为空";
+  }else{
+    bagBox.innerHTML = player.bag.map(x=>\`<span class="bag-item">\${x.name}</span>\`).join(" ");
+  }
+}
+window.levelUp = function(){
+  const cost = player.level * 120;
+  const cfg = gameData.config;
+  if(player.gold >= cost && player.level < cfg.maxLevel){
+    player.gold -= cost;
+    player.level +=1;
+    savePlayerData();
+    renderUi();
+  }
+};
+document.getElementById("btnNextStage").onclick = function(){
+  const cfg = gameData.config;
+  const list = cfg.battleMonsterIdList||[];
+  player.battleIndex = (player.battleIndex+1) % list.length;
+  renderUi();
+};
+
+window.onload = loadGameData;
+</script>
+</body>
+</html>`;
+
+// 用户自定义AI游戏模板持久化
+let userCustomGameTemplate = "";
+const CUSTOM_TPL_STORAGE_KEY = "editor_custom_game_template";
+
+function loadCustomTemplateFromStorage(){
+  const tpl = localStorage.getItem(CUSTOM_TPL_STORAGE_KEY) || "";
+  userCustomGameTemplate = tpl;
+}
+function saveCustomTemplate(htmlStr){
+  userCustomGameTemplate = htmlStr;
+  localStorage.setItem(CUSTOM_TPL_STORAGE_KEY, htmlStr);
+  log("模板","✅已保存自定义游戏模板");
+}
+function resetCustomTemplate(){
+  userCustomGameTemplate = "";
+  localStorage.removeItem(CUSTOM_TPL_STORAGE_KEY);
+  log("模板","已重置为系统默认内置模板");
+}
+function getActiveGameTemplate(){
+  if(userCustomGameTemplate && userCustomGameTemplate.trim().length>10){
+    return userCustomGameTemplate;
+  }
+  return IDLE_GAME_TEMPLATE_HTML;
+}
+
 let currentEditItemIndex = -1;
 let currentEditNpcIndex = -1;
 let currentEditMonsterIndex = -1;
@@ -13,14 +244,6 @@ let animPreviewTimer = null;
 let animPreviewCanvas, animPreviewCtx;
 let selectedRowIndex = -1;
 
-// ---------------------- 公共工具函数 ----------------------
-/**
- * ID重复检测
- * @param {Array} arr 数组
- * @param {string} id 待检测ID
- * @param {number} skipIndex 跳过当前编辑下标(编辑模式)
- * @returns {boolean}
- */
 function isIdDuplicate(arr, id, skipIndex = -1) {
   const tid = id.trim();
   for (let i = 0; i < arr.length; i++) {
@@ -29,13 +252,9 @@ function isIdDuplicate(arr, id, skipIndex = -1) {
   }
   return false;
 }
-
-/** 深拷贝对象，用于复制条目 */
 function cloneObj(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
-
-/** 设置表格选中行 */
 function setSelectedRow(domWrap, idx) {
   selectedRowIndex = idx;
   const trs = domWrap.querySelectorAll("tbody tr");
@@ -44,11 +263,8 @@ function setSelectedRow(domWrap, idx) {
     trs[idx].classList.add("row-active");
   }
 }
-// ----------------------------------------------------------
-
 
 function renderEditorPanel(modId) {
-  // 切换模块时全部重置编辑下标，防止串数据BUG
   currentEditItemIndex = -1;
   currentEditNpcIndex = -1;
   currentEditMonsterIndex = -1;
@@ -79,7 +295,7 @@ function renderEditorPanel(modId) {
 </div>`;
     }
   } else if (modId === "game-config") {
-    title = "游戏基础配置";
+    title = "游戏基础配置（放置挂机）";
     const p = ProjectManager.currentProject;
     if (!p) {
       bodyHtml = `<div class="card"><div class="empty-state"><p>请先新建项目</p></div></div>`;
@@ -90,11 +306,32 @@ function renderEditorPanel(modId) {
 <div class="card-title">全局游戏设置</div>
 <div class="form-grid">
 <div class="form-row"><label>游戏标题</label><input id="cf_gameTitle" value="${c.gameTitle || ""}"></div>
-<div class="form-row"><label>最大等级</label><input type="number" id="cf_maxLevel" value="${c.maxLevel || 99}"></div>
-<div class="form-row"><label>背景色</label><input type="color" id="cf_bgColor" value="${c.bgColor || "#111111"}"></div>
 <div class="form-row"><label>版本号</label><input id="cf_version" value="${c.version || "1.0.0"}"></div>
+<div class="form-row"><label>背景色</label><input type="color" id="cf_bgColor" value="${c.bgColor || "#111111"}"></div>
+<div class="form-row"><label>最大等级上限</label><input type="number" id="cf_maxLevel" value="${c.maxLevel || 99}"></div>
+<div class="form-row"><label>初始玩家等级</label><input type="number" id="cf_startLevel" value="${c.startLevel || 1}"></div>
 <div class="form-row"><label>初始金币</label><input type="number" id="cf_startGold" value="${c.startGold || 100}"></div>
-<div class="form-row"><label>初始血量</label><input type="number" id="cf_startHp" value="${c.startHp || 100}"></div>
+<div class="form-row"><label>初始血量HP</label><input type="number" id="cf_startHp" value="${c.startHp || 100}"></div>
+<div class="form-row"><label>基础每秒金币产出</label><input type="number" id="cf_baseGoldPerSec" value="${c.baseGoldPerSec || 10}"></div>
+<div class="form-row"><label>每级产出增长系数(1.15)</label><input type="number" step="0.01" id="cf_levelRate" value="${c.levelRate || 1.15}"></div>
+<div class="form-row"><label>挂机战斗间隔(毫秒)</label><input type="number" id="cf_battleTickMs" value="${c.battleTickMs || 2000}"></div>
+<div class="form-row"><label>开启离线收益</label>
+<select id="cf_enableOffline">
+<option value="true">开启</option>
+<option value="false">关闭</option>
+</select>
+</div>
+<div class="form-row"><label>离线收益最大时长(秒)</label><input type="number" id="cf_maxOfflineSec" value="${c.maxOfflineSec || 3600}"></div>
+<div class="form-row"><label>战斗失败是否重置推图</label>
+<select id="cf_deathResetStage">
+<option value="true">是</option>
+<option value="false">否</option>
+</select>
+</div>
+<div class="form-row full">
+<label>推图怪物ID序列，逗号分隔(例:m001,m002,m003)</label>
+<input id="cf_battleMonsterIdList" value="${(c.battleMonsterIdList||[]).join(",")}">
+</div>
 </div>
 <div class="btn-group" style="margin-top:16px">
 <button class="btn btn-primary" onclick="saveGameConfig()">保存配置</button>
@@ -338,13 +575,13 @@ function renderEditorPanel(modId) {
 </div>
 </div>`;
   } else if (modId === "export") {
-    title = "项目导出";
+    title = "项目导出 / 游戏模板管理";
     bodyHtml = `
 <div class="card">
 <div class="card-title">导出与备份</div>
 <div class="btn-group">
 <button class="btn btn-primary" onclick="downloadJson()">下载JSON配置</button>
-<button class="btn btn-success" onclick="generateGameZip()">打包完整游戏ZIP</button>
+<button class="btn btn-success" onclick="generateGameZip()">打包成品游戏ZIP</button>
 </div>
 <div class="form-row full" style="margin-top:16px;">
 <label>导入JSON文件</label>
@@ -352,8 +589,24 @@ function renderEditorPanel(modId) {
 </div>
 <div class="form-row full" style="margin-top:16px;">
 <label>JSON预览</label>
-<textarea id="jsonPreview" style="width:100%;height:280px;background:var(--bg-2);color:#eee;"></textarea>
+<textarea id="jsonPreview" style="width:100%;height:180px;background:var(--bg-2);color:#eee;"></textarea>
 <button class="btn" onclick="refreshJsonPreview()" style="margin-top:8px;">刷新预览</button>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title">🎮 AI游戏模板管理</div>
+<p>将AI生成的完整单页面HTML游戏模板粘贴下方文本框，点击【应用此模板】。打包游戏将使用该模板，无需修改源码文件。</p>
+<div class="form-row full" style="margin-top:12px;">
+<label>粘贴AI输出完整HTML模板代码</label>
+<textarea id="customTplInput" style="width:100%;height:320px;background:var(--bg-2);color:#eee;"></textarea>
+</div>
+<div class="btn-group" style="margin-top:10px;">
+<button class="btn btn-primary" onclick="applyCustomTemplate()">✅应用此模板</button>
+<button class="btn btn-danger" onclick="resetCustomTemplateUi()">🔄重置为系统默认模板</button>
+</div>
+<div style="margin-top:10px;color:var(--text-3);font-size:12px;">
+当前状态：<span id="tplStatusText">未使用自定义AI模板，使用系统内置模板</span>
 </div>
 </div>`;
   }
@@ -372,21 +625,74 @@ function renderEditorPanel(modId) {
   }, 60);
 }
 
-// ---------------------- 基础配置 ----------------------
+// 导出模块模板UI交互
+function applyCustomTemplate(){
+  const tplText = document.getElementById("customTplInput").value;
+  if(!tplText || tplText.trim().length < 50){
+    alert("模板内容太短，请粘贴AI输出完整HTML代码！");
+    return;
+  }
+  saveCustomTemplate(tplText);
+  document.getElementById("tplStatusText").innerText = "✅已启用用户自定义AI生成模板（浏览器本地已保存，刷新页面不丢失）";
+}
+function resetCustomTemplateUi(){
+  if(!confirm("确定要重置为系统默认放置模板？自定义粘贴的AI模板会被清空！")) return;
+  resetCustomTemplate();
+  document.getElementById("customTplInput").value = "";
+  document.getElementById("tplStatusText").innerText = "未使用自定义AI模板，使用系统内置模板";
+}
+
+// 打包函数
+async function generateGameZip() {
+  const p = ProjectManager.currentProject;
+  if (!p) {
+    log("警告", "请先新建项目");
+    alert("请先创建/打开一个游戏项目！");
+    return;
+  }
+  log("导出", "开始打包成品游戏ZIP");
+  const zip = new JSZip();
+  const jsonStr = ProjectManager.exportJson();
+  zip.file("game-data.json", jsonStr);
+  const useTemplateHtml = getActiveGameTemplate();
+  zip.file("index.html", useTemplateHtml);
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveAs(blob, (p.name || "game_release") + ".zip");
+  log("导出", "✅成品游戏ZIP打包完成，已经开始下载！");
+}
+
 function saveGameConfig() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "无打开项目"); return; }
-  p.config.gameTitle = document.getElementById("cf_gameTitle").value;
-  p.config.maxLevel = Number(document.getElementById("cf_maxLevel").value);
-  p.config.bgColor = document.getElementById("cf_bgColor").value;
-  p.config.version = document.getElementById("cf_version").value;
-  p.config.startGold = Number(document.getElementById("cf_startGold").value);
-  p.config.startHp = Number(document.getElementById("cf_startHp").value);
+  const c = p.config;
+
+  c.gameTitle = document.getElementById("cf_gameTitle").value.trim();
+  c.version = document.getElementById("cf_version").value.trim();
+  c.bgColor = document.getElementById("cf_bgColor").value;
+  c.maxLevel = Number(document.getElementById("cf_maxLevel").value);
+
+  c.startLevel = Number(document.getElementById("cf_startLevel").value);
+  c.startGold = Number(document.getElementById("cf_startGold").value);
+  c.startHp = Number(document.getElementById("cf_startHp").value);
+
+  c.baseGoldPerSec = Number(document.getElementById("cf_baseGoldPerSec").value);
+  c.levelRate = Number(document.getElementById("cf_levelRate").value);
+
+  c.battleTickMs = Number(document.getElementById("cf_battleTickMs").value);
+  c.enableOffline = document.getElementById("cf_enableOffline").value === "true";
+  c.maxOfflineSec = Number(document.getElementById("cf_maxOfflineSec").value);
+  c.deathResetStage = document.getElementById("cf_deathResetStage").value === "true";
+
+  const rawMonsterIds = document.getElementById("cf_battleMonsterIdList").value.split(",")
+    .map(s=>s.trim())
+    .filter(s=>s.length>0);
+  c.battleMonsterIdList = rawMonsterIds;
+
   ProjectManager.saveLocal();
-  log("配置", "游戏基础配置已保存");
+  log("配置", "游戏基础配置已保存（放置挂机参数已写入）");
 }
 
-// ---------------------- 物品模块 ----------------------
+//物品
 function openItemEditor() {
   currentEditItemIndex = -1;
   document.getElementById("itemId").value = "";
@@ -494,7 +800,7 @@ function duplicateItem() {
   renderItemList();
 }
 
-// ---------------------- NPC模块 ----------------------
+//NPC
 function openNpcEditor() {
   currentEditNpcIndex = -1;
   document.getElementById("npcId").value = "";
@@ -543,7 +849,7 @@ function renderNpcList(filter = "") {
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>类型</th><th>地图ID</th><th>操作</th></tr></thead><tbody>`;
   list.forEach((it, idx) => {
     h += `<tr class="${selectedRowIndex === idx ? 'row-active' : ''}" onclick="setSelectedRow(document.getElementById('npcListWrap'),${idx})" style="border-bottom:1px solid var(--border);cursor:pointer;">
-<td>${it.id}</td><td>${it.name}</td><td>${it.type}</td><td>${it.mapId || ""}</td>
+<td>${it.id}</td><td>${it.name}</td><td>${it.type}</td><td>${it.mapId||""}</td>
 <td>
 <button class="btn" onclick="event.stopPropagation();editNpc(${arr.indexOf(it)})">编辑</button>
 <button class="btn btn-danger" onclick="event.stopPropagation();deleteNpc(${arr.indexOf(it)})">删除</button>
@@ -578,7 +884,7 @@ function duplicateNpc() {
   log("NPC", `复制副本 ID:${cp.id}`); renderNpcList();
 }
 
-// ---------------------- 怪物模块 ----------------------
+//怪物
 function openMonsterEditor() {
   currentEditMonsterIndex = -1;
   document.getElementById("monsterId").value = "";
@@ -671,7 +977,7 @@ function duplicateMonster() {
   log("怪物", `复制副本 ID:${cp.id}`); renderMonsterList();
 }
 
-// ---------------------- 技能模块 ----------------------
+//技能
 function openSkillEditor() {
   currentEditSkillIndex = -1;
   document.getElementById("skillId").value = "";
@@ -760,7 +1066,7 @@ function duplicateSkill() {
   log("技能", `复制副本 ID:${cp.id}`); renderSkillList();
 }
 
-// ---------------------- 地图模块 ----------------------
+//地图
 function openMapCreator() {
   currentEditMapIndex = -1;
   document.getElementById("mapId").value = "";
@@ -789,7 +1095,8 @@ function paintTile(e) {
   const y = Math.floor((e.clientY - rect.top) / tileSize);
   const tile = Number(document.getElementById("tileSelect").value);
   if (y >= 0 && y < mapData.length && x >= 0 && x < mapData[0].length) {
-    mapData[y][x] = tile; drawMap();
+    mapData[y][x] = tile;
+    drawMap();
   }
 }
 function drawMap() {
@@ -859,7 +1166,7 @@ function deleteMap(idx) {
   log("地图", `删除：${m.name} | ID:${m.id}`);
 }
 
-// ---------------------- 动画模块 ----------------------
+//动画
 function openAnimCreator() {
   currentEditAnimIndex = -1;
   document.getElementById("animId").value = "";
@@ -889,8 +1196,8 @@ function refreshAnimFramePreview() {
   let h = "";
   animFrames.forEach((fr, i) => {
     h += `<div style="width:60px;height:60px;border:1px solid var(--border-2);border-radius:6px;overflow:hidden;">
-<img src="${fr.src}" style="width:100%;height:100%;object‑fit:contain;">
-<button style="width:100%;font‑size:10px;" onclick="removeAnimFrame(${i})">删除</button>
+<img src="${fr.src}" style="width:100%;height:100%;object-fit:contain;">
+<button style="width:100%;font-size:10px;" onclick="removeAnimFrame(${i})">删除</button>
 </div>`;
   });
   wrap.innerHTML = h;
@@ -932,61 +1239,12 @@ function saveAnimation() {
 function renderAnimList() {
   const wrap = document.getElementById("animListWrap");
   const arr = ProjectManager.currentProject?.animations || [];
-  if (arr.length === 0) { wrap.innerHTML = "<p class='empty‑state'>暂无动画</p>"; return; }
-  let h = `<table style="width:100%;border‑collapse:collapse;">
-<thead><tr style="background:var(--bg‑3);"><th>ID</th><th>名称</th><th>帧数</th><th>操作</th></tr></thead><tbody>`;
+  if (arr.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无动画</p>"; return; }
+  let h = `<table style="width:100%;border-collapse:collapse;">
+<thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>帧数</th><th>操作</th></tr></thead><tbody>`;
   arr.forEach((a, idx) => {
-    h += `<tr style="border‑bottom:1px solid var(--border);">
+    h += `<tr style="border-bottom:1px solid var(--border);">
 <td>${a.id}</td><td>${a.name}</td><td>${a.frames.length}</td>
-<td><button class="btn" onclick="editAnim(${idx})">编辑</button><button class="btn btn‑danger" onclick="deleteAnim(${idx})">删除</button></td></tr>`;
+<td><button class="btn" onclick="editAnim(${idx})">编辑</button><button class="btn btn-danger" onclick="deleteAnim(${idx})">删除</button></td></tr>`;
   });
-  h += "</tbody></table>"; wrap.innerHTML = h;
-}
-function editAnim(idx) {
-  const a = ProjectManager.currentProject.animations[idx];
-  currentEditAnimIndex = idx;
-  document.getElementById("animId").value = a.id;
-  document.getElementById("animName").value = a.name;
-  document.getElementById("animFrameDelay").value = a.frameDelay;
-  animFrames = [];
-  a.frames.forEach(f => {
-    const img = new Image(); img.src = f.src;
-    animFrames.push({ src: f.src, img: img });
-  });
-  refreshAnimFramePreview();
-  document.getElementById("animEditCard").style.display = "block";
-  animPreviewCanvas = document.getElementById("animPreviewCanvas");
-  animPreviewCtx = animPreviewCanvas.getContext("2d");
-  stopAnimPreview();
-}
-function deleteAnim(idx) {
-  const a = ProjectManager.currentProject.animations[idx];
-  if (!confirm(`删除动画【${a.name}】?`)) return;
-  ProjectManager.currentProject.animations.splice(idx, 1); ProjectManager.saveLocal(); renderAnimList();
-  log("动画", `删除：${a.name} | ID:${a.id}`);
-}
-
-// ---------------------- 导出模块 ----------------------
-function downloadJson() { exportProjectJson(); }
-function importJsonFile(input) {
-  const f = input.files[0];
-  const r = new FileReader();
-  r.onload = ev => {
-    const ok = ProjectManager.importJson(ev.target.result);
-    if (ok) {
-      document.getElementById("projectNameDisplay").innerText = ProjectManager.currentProject.name;
-      log("导出", "导入JSON成功");
-    } else {
-      log("错误", "JSON解析失败");
-    }
-  };
-  r.readAsText(f);
-}
-function refreshJsonPreview() {
-  const txt = ProjectManager.exportJson();
-  document.getElementById("jsonPreview").value = txt ?? "";
-}
-function generateGameZip() {
-  alert("ZIP打包逻辑待实现");
-  log("导出", "打包ZIP功能后续实现");
-}
+  h += "</tbody></table>"; wrap.innerHTML = h
