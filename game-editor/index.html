@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>专业游戏开发编辑器 | 在线游戏制作工具</title>
+<!-- 依赖 -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<!-- 顶部工作流步骤 -->
+<div class="top-nav">
+  <div class="workflow-step">
+    <div class="step-item active" data-step="1">
+      <span class="num">1</span>
+      <span>新建项目</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="2">
+      <span class="num">2</span>
+      <span>游戏基础配置</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="3">
+      <span class="num">3</span>
+      <span>游戏数据编辑</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="4">
+      <span class="num">4</span>
+      <span>地图场景编辑</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="5">
+      <span class="num">5</span>
+      <span>动画资源制作</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="6">
+      <span class="num">6</span>
+      <span>导出游戏项目</span>
+    </div>
+  </div>
+</div>
+
+<!-- 工具栏 -->
+<div class="tool-bar">
+  <button class="tool-btn btn-default" onclick="newProject()">新建项目</button>
+  <button class="tool-btn btn-default" onclick="importProject()">导入项目</button>
+  <button class="tool-btn btn-warning" onclick="saveProject()">保存项目</button>
+  <button class="tool-btn btn-primary" onclick="exportProjectJson()">导出配置</button>
+  <button class="tool-btn btn-success" onclick="generateGameZip()">打包导出完整游戏</button>
+  <div class="project-info">当前项目：<span id="curProjectName">未创建</span></div>
+</div>
+
+<!-- 主内容 -->
+<div class="main-container">
+  <!-- 左侧模块菜单 -->
+  <div class="left-sidebar">
+    <div class="module-title">游戏资源模块</div>
+    <div class="search-box">
+      <input type="text" id="searchKey" placeholder="搜索ID/名称" oninput="filterModuleList()">
+    </div>
+    <div class="module-list" id="moduleList">
+      <div class="module-item active" data-type="config">⚙️ 游戏基础配置</div>
+      <div class="module-item" data-type="item">🎒 游戏物品/道具</div>
+      <div class="module-item" data-type="npc">👤 交互NPC</div>
+      <div class="module-item" data-type="monster">👾 游戏怪物</div>
+      <div class="module-item" data-type="skill">✨ 游戏技能</div>
+      <div class="module-item" data-type="map">🗺️ 地图场景</div>
+    </div>
+    <div style="padding:10px;border-top:1px solid var(--border);">
+      <button class="tool-btn btn-primary" style="width:100%" onclick="addNewModuleItem()">新建配置条目</button>
+    </div>
+  </div>
+
+  <!-- 中间编辑区 -->
+  <div class="edit-area" id="editArea">
+    <div class="edit-card">
+      <div class="card-title">第一步：创建游戏项目</div>
+      <div class="empty-tip">
+        <p>请先点击【新建项目】，选择游戏类型、填写玩法，开始你的游戏制作！</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧预览 & 日志 -->
+  <div class="right-sidebar">
+    <div class="preview-box" id="previewBox">
+      <div class="card-title">实时预览</div>
+      <div class="empty-tip">编辑内容后在此预览效果</div>
+    </div>
+    <div class="log-box" id="logBox">
+      系统日志：编辑器加载完成，可开始制作游戏
+    </div>
+  </div>
+</div>
+
+<!-- 新建项目弹窗 -->
+<div class="modal" id="newProjectModal">
+  <div class="modal-content">
+    <div class="modal-title">新建游戏项目</div>
+    <div class="form-item full-col">
+      <label>项目名称</label>
+      <input type="text" id="projName" placeholder="例如：放置修仙小游戏">
+    </div>
+    <div class="form-item full-col">
+      <label>游戏类型</label>
+      <select id="projType">
+        <option value="idle">放置挂机游戏</option>
+        <option value="rpg">角色扮演RPG</option>
+        <option value="action">横版动作游戏</option>
+        <option value="turn">回合制游戏</option>
+      </select>
+    </div>
+    <div class="form-item full-col">
+      <label>游戏玩法 &amp; 简介</label>
+      <textarea id="projDesc" rows="4" placeholder="详细描述你的游戏玩法、特色、规则..."></textarea>
+    </div>
+    <div class="btn-group">
+      <button class="tool-btn btn-default" onclick="closeModal()">取消</button>
+      <button class="tool-btn btn-success" onclick="confirmNewProject()">创建项目</button>
+    </div>
+  </div>
+</div>
+
+<!-- JS加载顺序：先core，再各个模块 -->
+<script src="js/core.js"></script>
+<script src="js/project.js"></script>
+<script src="js/module-item.js"></script>
+<script src="js/module-npc.js"></script>
+<script src="js/module-monster.js"></script>
+<script src="js/module-skill.js"></script>
+<script src="js/module-map.js"></script>
+<script src="js/export-zip.js"></script>
+<script>
+window.onload = ()=>{
+  loadLocalData();
+  renderModuleUI();
+  bindStepEvent();
+  log("✅ 模块化编辑器初始化完成");
+}
+</script>
+</body>
+</html>
