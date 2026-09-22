@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏开发编辑器</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-container">
+  <!-- 顶部步骤导航 -->
+  <header class="top-step-nav">
+    <div class="step-item active" data-step="1">
+      <span class="step-num">1</span>
+      <span>新建项目</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="2">
+      <span class="step-num">2</span>
+      <span>游戏基础配置</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="3">
+      <span class="step-num">3</span>
+      <span>游戏数据编辑</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="4">
+      <span class="step-num">4</span>
+      <span>地图场景编辑</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="5">
+      <span class="step-num">5</span>
+      <span>动画资源制作</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="6">
+      <span class="step-num">6</span>
+      <span>导出游戏项目</span>
+    </div>
+  </header>
+
+  <!-- 顶部操作栏 -->
+  <div class="top-action-bar">
+    <button class="tool-btn btn-default" onclick="newProject()">新建项目</button>
+    <button class="tool-btn btn-default" onclick="importProject()">导入项目</button>
+    <button class="tool-btn btn-warning" onclick="saveProject()">保存项目</button>
+    <button class="tool-btn btn-primary" onclick="exportProjectJson()">导出配置JSON</button>
+    <button class="tool-btn btn-success" onclick="generateGameZip()">打包导出完整游戏</button>
+    <div class="project-info">当前项目：<span id="curProjectName">未创建</span></div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main-wrap">
+    <!-- 左侧边栏（动态渲染） -->
+    <aside class="left-sidebar" id="leftSidebar">
+      <!-- JS动态填充 -->
+    </aside>
+
+    <!-- 中间编辑区 -->
+    <main class="editor-main" id="editorMain">
+      <!-- JS动态填充 -->
+    </main>
+
+    <!-- 右侧预览 & 日志 -->
+    <aside class="right-sidebar">
+      <div class="preview-box">
+        <div class="panel-title">实时预览</div>
+        <div id="previewArea" class="preview-content">
+          <div class="empty-tip">选择左侧条目后在此预览</div>
+        </div>
+      </div>
+      <div class="log-box">
+        <div class="panel-title">系统日志</div>
+        <div id="logArea" class="log-content">
+          编辑器初始化完成，请先新建项目
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- 新建项目弹窗 -->
+<div class="modal" id="newProjectModal">
+  <div class="modal-content">
+    <div class="modal-title">新建游戏项目</div>
+    <div class="form-item">
+      <label>项目名称</label>
+      <input type="text" id="projName" placeholder="例如：放置修仙小游戏">
+    </div>
+    <div class="form-item">
+      <label>游戏类型</label>
+      <select id="projType">
+        <option value="idle">放置挂机游戏</option>
+        <option value="rpg">角色扮演RPG</option>
+        <option value="action">横版动作游戏</option>
+        <option value="turn">回合制游戏</option>
+      </select>
+    </div>
+    <div class="form-item">
+      <label>游戏玩法简介</label>
+      <textarea id="projDesc" rows="4" placeholder="详细描述你的游戏玩法、特色、规则..."></textarea>
+    </div>
+    <div class="btn-group">
+      <button class="tool-btn btn-default" onclick="closeModal()">取消</button>
+      <button class="tool-btn btn-success" onclick="confirmNewProject()">创建项目</button>
+    </div>
+  </div>
+</div>
+
+<!-- JS 模块按顺序加载 -->
+<script src="js/core.js"></script>
+<script src="js/project.js"></script>
+<script src="js/config.js"></script>
+<script src="js/data-item.js"></script>
+<script src="js/data-npc.js"></script>
+<script src="js/data-monster.js"></script>
+<script src="js/data-skill.js"></script>
+<script src="js/map-editor.js"></script>
+<script src="js/anim-editor.js"></script>
+<script src="js/export.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
