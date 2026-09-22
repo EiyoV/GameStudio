@@ -1,429 +1,153 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2.5D自动战斗放置游戏编辑器</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Game Studio · 网页游戏编辑器</title>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui, sans-serif;}
-body{background:#111520;color:#e4e8f0;padding:14px;max-width:1400px;margin:0 auto;}
-h1{color:#fff;margin-bottom:12px;font-size:22px;}
-.panel{background:#191e2d;border:1px solid #293044;border-radius:10px;padding:16px;margin-bottom:14px;}
-h2{font-size:17px;margin-bottom:10px;color:#ffffff;}
-input,textarea,select{width:100%;padding:7px 9px;margin:6px 0;background:#10141c;border:1px solid #333b52;color:#fff;border-radius:6px;}
-button{padding:8px 12px;border-radius:7px;border:none;background:#4b66e0;color:#fff;margin:4px;cursor:pointer;}
-button.success{background:#28a745;}
-button.danger{background:#c53636;}
-button.warn{background:#d48822;}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.col{flex:1;min-width:220px;}
-#log{height:160px;overflow-y:auto;background:#0e1118;padding:10px;border-radius:6px;color:#a0d8b4;font-size:13px;white-space:pre-wrap;}
-#publishResult{margin-top:8px;}
-</style>
+<link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-<h1>🎮 2.5D全自动战斗放置游戏编辑器（支持一键同步配置到后端服务器）</h1>
-
-<div class="panel">
-  <h2>项目操作</h2>
-  <button onclick="newProject()">新建项目</button>
-  <button onclick="saveProjectLocal()">保存项目到本地</button>
-  <button onclick="loadProjectLocal()">加载本地项目</button>
-  <button onclick="exportJson()">导出game-data.json</button>
-  <button onclick="importJson()">导入json配置</button>
-</div>
-
-<!-- ==========【新增：发布配置到后端面板】========== -->
-<div class="panel">
-  <h2>📤 同步配置到游戏后端服务器</h2>
-  <div class="row">
-    <div class="col">
-      <label>后端API地址：</label>
-      <input id="backendUrl" value="http://localhost:3000" placeholder="http://xxx.xxx.xxx:3000">
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="9" cy="12" r="1.6" fill="currentColor"/>
+          <circle cx="15" cy="12" r="1.6" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">Game Studio</div>
+        <div class="brand-sub">可视化网页游戏编辑器</div>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <div class="step-nav" id="stepNav">
+        <div class="step active" data-step="1">
+          <div class="step-num">1</div>
+          <div class="step-label">新建项目</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2">
+          <div class="step-num">2</div>
+          <div class="step-label">基础配置</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3">
+          <div class="step-num">3</div>
+          <div class="step-label">数据编辑</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="4">
+          <div class="step-num">4</div>
+          <div class="step-label">地图编辑</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="5">
+          <div class="step-num">5</div>
+          <div class="step-label">动画制作</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="6">
+          <div class="step-num">6</div>
+          <div class="step-label">导出项目</div>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="project-name" id="projectNameDisplay">未创建项目</div>
+      <button class="btn btn-ghost" onclick="saveProject()">保存</button>
+      <button class="btn btn-primary" onclick="exportProjectJson()">导出配置</button>
+      <button class="btn btn-success" onclick="generateGameZip()">打包放置游戏</button>
+    </div>
+  </header>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-default" onclick="newProject()">新建项目</button>
+      <button class="btn btn-default" onclick="importProject()">导入项目</button>
+    </div>
+    <div class="toolbar-right" id="toolbarRight"></div>
+  </div>
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sidebar-search">
+        <input type="text" id="moduleSearch" placeholder="搜索模块 / 资源" />
+      </div>
+      <div class="sidebar-menu" id="sidebarMenu"></div>
+    </aside>
+    <section class="editor" id="editor">
+      <div class="editor-header">
+        <div class="editor-title">欢迎使用 Game Studio</div>
+        <div></div>
+      </div>
+      <div class="editor-body">
+        <div class="empty-state">
+          <div class="big-icon">🎮</div>
+          <p>点击上方【新建项目】开始你的游戏制作之旅</p>
+        </div>
+      </div>
+    </section>
+    <aside class="right-panel">
+      <div class="panel preview-panel">
+        <div class="panel-header">
+          <div class="panel-title">实时预览</div>
+        </div>
+        <div class="panel-body" id="previewBox">
+          <div class="empty">选择资源后预览效果</div>
+        </div>
+      </div>
+      <div class="panel log-panel">
+        <div class="panel-header">
+          <div class="panel-title">系统日志</div>
+          <button class="btn-link" onclick="clearLog()">清空</button>
+        </div>
+        <div class="panel-body log-body" id="logBox">
+[系统] Game Studio 编辑器已加载
+        </div>
+      </div>
+    </aside>
+  </div>
+  <div class="modal" id="newProjectModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">新建游戏项目</div>
+        <button class="icon-btn" onclick="closeModal()">
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>项目名称</label>
+          <input type="text" id="projName" placeholder="例如：我的冒险小游戏" />
+        </div>
+        <div class="form-row">
+          <label>游戏类型</label>
+          <select id="projType">
+            <option value="idle">放置挂机游戏</option>
+            <option value="rpg">角色扮演 RPG</option>
+            <option value="action">横版动作游戏</option>
+            <option value="turn">回合制游戏</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>项目描述</label>
+          <textarea id="projDesc" rows="4" placeholder="描述游戏玩法、特色和目标..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="confirmNewProject()">创建项目</button>
+      </div>
     </div>
   </div>
-  <button class="success" onclick="publishConfigToServer()">发布配置到后端服务器</button>
-  <div id="publishResult"></div>
-  <p style="font-size:12px;color:#b0b8d0;margin-top:6px;">
-  ✅修改怪物/技能/物品后，点这个按钮，直接上传配置到后端，后端热更新，玩家刷新页面生效。
-  </p>
 </div>
 
-<div class="panel">
-  <h2>步骤1：基础配置</h2>
-  <div class="row">
-    <div class="col">
-      <label>项目名称</label>
-      <input id="projName" value="2.5D挂机游戏">
-    </div>
-    <div class="col">
-      <label>起始等级</label>
-      <input id="startLevel" type="number" value="1">
-    </div>
-    <div class="col">
-      <label>起始HP</label>
-      <input id="startHp" type="number" value="150">
-    </div>
-    <div class="col">
-      <label>起始金币</label>
-      <input id="startGold" type="number" value="0">
-    </div>
-    <div class="col">
-      <label>最大等级</label>
-      <input id="maxLevel" type="number" value="99">
-    </div>
-  </div>
-  <label>战斗怪物ID列表（逗号分隔，例 m001,m002）</label>
-  <input id="battleMonsterIdList" value="m001">
-</div>
-
-<div class="panel">
-  <h2>步骤2：怪物列表管理</h2>
-  <div class="row">
-    <div class="col">
-      <label>怪物ID</label>
-      <input id="monId" value="m001">
-    </div>
-    <div class="col">
-      <label>怪物名称</label>
-      <input id="monName" value="哥布林">
-    </div>
-    <div class="col">
-      <label>HP</label>
-      <input id="monHp" type="number" value="100">
-    </div>
-    <div class="col">
-      <label>ATK</label>
-      <input id="monAtk" type="number" value="10">
-    </div>
-    <div class="col">
-      <label>DEF</label>
-      <input id="monDef" type="number" value="0">
-    </div>
-    <div class="col">
-      <label>金币</label>
-      <input id="monGold" type="number" value="10">
-    </div>
-    <div class="col">
-      <label>EXP</label>
-      <input id="monExp" type="number" value="20">
-    </div>
-  </div>
-  <label>掉落物品ID（逗号分隔，留空无掉落）</label>
-  <input id="monDropIds" value="">
-  <button onclick="addMonster()">添加/更新怪物</button>
-  <button class="danger" onclick="delMonster()">删除选中怪物</button>
-  <h3>怪物清单</h3>
-  <textarea id="monsterListBox" style="height:120px;" readonly></textarea>
-</div>
-
-<div class="panel">
-  <h2>步骤3：技能列表管理</h2>
-  <div class="row">
-    <div class="col">
-      <label>技能ID</label>
-      <input id="skId" value="sk001">
-    </div>
-    <div class="col">
-      <label>技能名称</label>
-      <input id="skName" value="火球">
-    </div>
-    <div class="col">
-      <label>威力 power</label>
-      <input id="skPower" type="number" value="30">
-    </div>
-    <div class="col">
-      <label>MP消耗 mpCost</label>
-      <input id="skMpCost" type="number" value="10">
-    </div>
-    <div class="col">
-      <label>冷却 cd</label>
-      <input id="skCd" type="number" value="60">
-    </div>
-  </div>
-  <button onclick="addSkill()">添加/更新技能</button>
-  <button class="danger" onclick="delSkill()">删除选中技能</button>
-  <h3>技能清单</h3>
-  <textarea id="skillListBox" style="height:120px;" readonly></textarea>
-</div>
-
-<div class="panel">
-  <h2>步骤4：物品管理</h2>
-  <div class="row">
-    <div class="col">
-      <label>物品ID</label>
-      <input id="itemId" value="it001">
-    </div>
-    <div class="col">
-      <label>物品名称</label>
-      <input id="itemName" value="红药水">
-    </div>
-    <div class="col">
-      <label>描述</label>
-      <input id="itemDesc" value="恢复少量生命">
-    </div>
-  </div>
-  <button onclick="addItem()">添加/更新物品</button>
-  <button class="danger" onclick="delItem()">删除选中物品</button>
-  <h3>物品清单</h3>
-  <textarea id="itemListBox" style="height:100px;" readonly></textarea>
-</div>
-
-<div class="panel">
-  <h2>步骤5：游戏模板（前端index.html）</h2>
-  <textarea id="gameTemplateBox" style="height:320px;"></textarea>
-  <button onclick="applyTemplate()">应用模板</button>
-  <button class="warn" onclick="generateGameZip()">打包游戏zip（index.html）</button>
-</div>
-
-<div class="panel">
-  <h2>日志输出</h2>
-  <div id="log"></div>
-</div>
-
-<script>
-// ==========项目管理器核心（保留原有全部逻辑）==========
-const ProjectManager = {
-  currentProject: {
-    name:"2.5D挂机游戏",
-    config:{
-      startLevel:1,
-      startHp:150,
-      startGold:0,
-      maxLevel:99,
-      battleMonsterIdList:"m001"
-    },
-    monsters:[],
-    skills:[],
-    items:[]
-  },
-  exportJson(){
-    return JSON.stringify(this.currentProject,null,2);
-  },
-  loadFromJson(jsonStr){
-    const obj = JSON.parse(jsonStr);
-    this.currentProject = obj;
-    syncUiFromProject();
-    log("✅项目已加载");
-  }
-}
-
-function log(text){
-  const dom = document.getElementById("log");
-  dom.innerHTML += text + "\n";
-  dom.scrollTop = dom.scrollHeight;
-}
-
-// ==========【新增：发布配置到后端API 核心函数】==========
-async function publishConfigToServer(){
-  const baseUrl = document.getElementById("backendUrl").value.trim();
-  const jsonStr = ProjectManager.exportJson();
-  const gameDataObj = JSON.parse(jsonStr);
-  const resultDom = document.getElementById("publishResult");
-  try{
-    const res = await fetch(`${baseUrl}/api/upload-config`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(gameDataObj)
-    });
-    const ret = await res.json();
-    if(ret.ok){
-      resultDom.innerHTML = `<span style="color:#4cd964">✅成功：${ret.msg}</span>`;
-      log("📤配置成功同步到后端服务器！");
-    }else{
-      resultDom.innerHTML = `<span style="color:#ff5555">❌失败：${ret.msg}</span>`;
-      log("❌上传失败："+ret.msg);
-    }
-  }catch(err){
-    resultDom.innerHTML = `<span style="color:#ff5555">❌网络错误，请确认后端服务已经启动！</span>`;
-    log("❌网络异常，无法连接后端："+err.message);
-    console.error(err);
-  }
-}
-
-// ==========项目基础操作==========
-function newProject(){
-  ProjectManager.currentProject = {
-    name:"2.5D挂机游戏",
-    config:{
-      startLevel:1,
-      startHp:150,
-      startGold:0,
-      maxLevel:99,
-      battleMonsterIdList:"m001"
-    },
-    monsters:[],
-    skills:[],
-    items:[]
-  };
-  syncUiFromProject();
-  log("📄新建空白项目");
-}
-function saveProjectLocal(){
-  const blob = new Blob([ProjectManager.exportJson()],{type:"application/json"});
-  saveAs(blob,"game-project.json");
-  log("💾项目文件已下载");
-}
-function loadProjectLocal(){
-  const input = document.createElement("input");
-  input.type="file";
-  input.accept=".json";
-  input.onchange = e=>{
-    const f = e.target.files[0];
-    const r = new FileReader();
-    r.onload = ev=>{
-      ProjectManager.loadFromJson(ev.target.result);
-    }
-    r.readAsText(f);
-  }
-  input.click();
-}
-function exportJson(){
-  const blob = new Blob([ProjectManager.exportJson()],{type:"application/json"});
-  saveAs(blob,"game-data.json");
-  log("📥导出 game-data.json");
-}
-function importJson(){
-  const input = document.createElement("input");
-  input.type="file";
-  input.accept=".json";
-  input.onchange = e=>{
-    const f = e.target.files[0];
-    const r = new FileReader();
-    r.onload = ev=>{
-      ProjectManager.loadFromJson(ev.target.result);
-    }
-    r.readAsText(f);
-  }
-  input.click();
-}
-
-// ==========怪物操作==========
-function addMonster(){
-  const pid = document.getElementById("monId").value.trim();
-  const name = document.getElementById("monName").value.trim();
-  const hp = Number(document.getElementById("monHp").value);
-  const atk = Number(document.getElementById("monAtk").value);
-  const def = Number(document.getElementById("monDef").value);
-  const gold = Number(document.getElementById("monGold").value);
-  const exp = Number(document.getElementById("monExp").value);
-  const dropIds = document.getElementById("monDropIds").value.split(",").map(x=>x.trim()).filter(x=>x);
-  const arr = ProjectManager.currentProject.monsters;
-  const idx = arr.findIndex(x=>x.id === pid);
-  const monObj = {id:pid,name,hp,atk,def,gold,exp,dropItemIds:dropIds};
-  if(idx>=0) arr[idx]=monObj;
-  else arr.push(monObj);
-  syncUiFromProject();
-  log(`👾怪物【${name}】已添加/更新`);
-}
-function delMonster(){
-  const pid = document.getElementById("monId").value.trim();
-  const arr = ProjectManager.currentProject.monsters;
-  ProjectManager.currentProject.monsters = arr.filter(x=>x.id!==pid);
-  syncUiFromProject();
-  log(`🗑️怪物ID ${pid}已删除`);
-}
-
-// ==========技能操作==========
-function addSkill(){
-  const sid = document.getElementById("skId").value.trim();
-  const name = document.getElementById("skName").value.trim();
-  const power = Number(document.getElementById("skPower").value);
-  const mpCost = Number(document.getElementById("skMpCost").value);
-  const cd = Number(document.getElementById("skCd").value);
-  const arr = ProjectManager.currentProject.skills;
-  const idx = arr.findIndex(x=>x.id === sid);
-  const skObj = {id:sid,name,power,mpCost,cd};
-  if(idx>=0) arr[idx]=skObj;
-  else arr.push(skObj);
-  syncUiFromProject();
-  log(`✨技能【${name}】已添加/更新`);
-}
-function delSkill(){
-  const sid = document.getElementById("skId").value.trim();
-  const arr = ProjectManager.currentProject.skills;
-  ProjectManager.currentProject.skills = arr.filter(x=>x.id!==sid);
-  syncUiFromProject();
-  log(`🗑️技能ID ${sid}已删除`);
-}
-
-// ==========物品操作==========
-function addItem(){
-  const iid = document.getElementById("itemId").value.trim();
-  const name = document.getElementById("itemName").value.trim();
-  const desc = document.getElementById("itemDesc").value.trim();
-  const arr = ProjectManager.currentProject.items;
-  const idx = arr.findIndex(x=>x.id === iid);
-  const itemObj = {id:iid,name,desc};
-  if(idx>=0) arr[idx]=itemObj;
-  else arr.push(itemObj);
-  syncUiFromProject();
-  log(`📦物品【${name}】已添加/更新`);
-}
-function delItem(){
-  const iid = document.getElementById("itemId").value.trim();
-  const arr = ProjectManager.currentProject.items;
-  ProjectManager.currentProject.items = arr.filter(x=>x.id!==iid);
-  syncUiFromProject();
-  log(`🗑️物品ID ${iid}已删除`);
-}
-
-// ==========模板与打包==========
-function getActiveGameTemplate(){
-  return document.getElementById("gameTemplateBox").value;
-}
-function applyTemplate(){
-  log("📝应用游戏模板");
-}
-async function generateGameZip() {
-  const p = ProjectManager.currentProject;
-  if (!p) {
-    log("警告", "请先新建/打开一个游戏项目！");
-    alert("⚠️请先【新建项目】，填写项目内容之后再打包！");
-    return;
-  }
-  log("导出", "开始打包前端index.html");
-  const zip = new JSZip();
-  const htmlTemplate = getActiveGameTemplate();
-  zip.file("index.html", htmlTemplate);
-  const blob = await zip.generateAsync({ type: "blob" });
-  saveAs(blob, (p.name || "game") + ".zip");
-  log("✅打包完成！下载zip，解压打开index.html");
-}
-
-// ==========UI同步，项目数据回填到页面==========
-function syncUiFromProject(){
-  const prj = ProjectManager.currentProject;
-  document.getElementById("projName").value = prj.name;
-  document.getElementById("startLevel").value = prj.config.startLevel;
-  document.getElementById("startHp").value = prj.config.startHp;
-  document.getElementById("startGold").value = prj.config.startGold;
-  document.getElementById("maxLevel").value = prj.config.maxLevel;
-  document.getElementById("battleMonsterIdList").value = prj.config.battleMonsterIdList;
-
-  //怪物列表文本框
-  let monText = "";
-  prj.monsters.forEach(m=>{ monText += `${m.id} | ${m.name} HP:${m.hp}\n`; });
-  document.getElementById("monsterListBox").value = monText;
-
-  //技能列表文本框
-  let skText = "";
-  prj.skills.forEach(s=>{ skText += `${s.id} | ${s.name} power:${s.power}\n`; });
-  document.getElementById("skillListBox").value = skText;
-
-  //物品列表文本框
-  let itemText = "";
-  prj.items.forEach(it=>{ itemText += `${it.id} | ${it.name} ${it.desc}\n`; });
-  document.getElementById("itemListBox").value = itemText;
-}
-
-//页面加载初始化
-window.onload = function(){
-  syncUiFromProject();
-  log("✅编辑器已加载完成，可以开始编辑游戏数据");
-}
-</script>
+<script src="js/core.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
