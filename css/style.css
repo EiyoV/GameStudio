@@ -119,6 +119,7 @@ input,select,textarea{font-family:inherit;outline:none;}
 .modal-title{font-size:15px;font-weight:700;color:#fff;}
 .modal-body{padding:18px;}
 .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--border);background:var(--bg-1);}
+tr.row-active{background:var(--primary-bg) !important;}
 ::-webkit-scrollbar{width:8px;height:8px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:#2a3146;border-radius:8px;}
