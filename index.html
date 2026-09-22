@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>网页游戏编辑器</title>
+<title>网页游戏编辑器 - Github Pages可用</title>
+<!-- 引入打包zip依赖CDN -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui, sans-serif;}
 body{background:#1a1a22;color:#eee;height:100vh;display:flex;flex-direction:column;}
@@ -28,8 +31,6 @@ label{width:120px;}
 .preview-box{margin:10px 0;padding:10px;background:#111;border-radius:6px;}
 .anim-preview{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
 .anim-frame{width:60px;height:60px;background:#333;object-fit:contain;}
-#game-preview{position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;display:none;z-index:99;}
-.close-preview{position:absolute;top:10px;right:10px;z-index:100;}
 </style>
 </head>
 <body>
@@ -43,10 +44,10 @@ label{width:120px;}
   </select>
   <textarea id="gameDesc" placeholder="填写游戏玩法描述..." style="width:300px;height:36px;"></textarea>
   <button onclick="newProject()">新建项目</button>
-  <button onclick="exportJson()">导出JSON</button>
-  <button onclick="importJson()">导入JSON</button>
-  <button class="success" onclick="genGameCode()">生成游戏代码</button>
-  <button class="success" onclick="startGame()">开始游戏</button>
+  <button onclick="exportJson()">导出项目JSON</button>
+  <button onclick="importJson()">导入项目JSON</button>
+  <button class="success" onclick="genGameCodePrompt()">复制生成游戏提示词</button>
+  <button class="success" onclick="exportGameZip()">生成并下载游戏项目</button>
 </header>
 <div id="main">
   <div id="left">
@@ -78,11 +79,6 @@ label{width:120px;}
       <input type="file" id="animUpload" accept="image/*" multiple onchange="onAnimUpload(event)">
     </div>
   </div>
-</div>
-
-<div id="game-preview">
-  <button class="close-preview" onclick="closePreview()">关闭预览</button>
-  <iframe id="gameIframe" style="width:100%;height:100%;border:none;"></iframe>
 </div>
 
 <script>
@@ -304,10 +300,7 @@ function exportJson(){
   state.gameDesc = document.getElementById("gameDesc").value;
   saveLocal();
   const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = state.projectName+".json";
-  a.click();
+  saveAs(blob, state.projectName+".json");
 }
 function importJson(){
   const ipt = document.createElement("input");
@@ -328,7 +321,7 @@ function importJson(){
   }
   ipt.click();
 }
-function genGameCode(){
+function genGameCodePrompt(){
   state.projectName = document.getElementById("projectName").value;
   state.gameType = document.getElementById("gameType").value;
   state.gameDesc = document.getElementById("gameDesc").value;
@@ -341,41 +334,42 @@ function genGameCode(){
 要求：读取上面物品、NPC、怪物、技能数据，做成网页游戏，能运行。
 `;
   navigator.clipboard.writeText(prompt).then(()=>{
-    alert("生成游戏代码的提示词已经复制到剪贴板！直接粘贴发给豆包，就能生成游戏源码");
+    alert("提示词已复制！粘贴发给豆包生成游戏源码");
   }).catch(()=>alert(prompt));
 }
-function startGame(){
+// 生成游戏项目ZIP包下载
+async function exportGameZip(){
   state.projectName = document.getElementById("projectName").value;
   state.gameType = document.getElementById("gameType").value;
   state.gameDesc = document.getElementById("gameDesc").value;
   saveLocal();
-  const gameData = JSON.stringify(state.data);
-  // 简单内置游戏预览页面，加载数据
-  const gameHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>${state.projectName}</title></head>
+  const zip = new JSZip();
+  // 游戏数据json文件
+  zip.file("game-data.json", JSON.stringify(state.data,null,2));
+  // 基础游戏入口html模板
+  const gameIndexHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>${state.projectName}</title>
+</head>
 <body style="background:#111;color:#fff;padding:20px;">
 <h1>${state.projectName}</h1>
 <p>游戏类型：${state.gameType}</p>
-<p>玩法：${state.gameDesc}</p>
-<h3>已加载的游戏数据</h3>
-<pre>${gameData}</pre>
+<p>${state.gameDesc}</p>
 <script>
-// 这里就是你的游戏，豆包生成代码后会替换这部分
-const GAME_DATA = ${gameData};
-console.log("游戏数据", GAME_DATA);
+fetch("./game-data.json").then(res=>res.json()).then(data=>{
+  window.GAME_DATA = data;
+  console.log("游戏数据加载完成", GAME_DATA);
+})
 </script>
-</body></html>
-`;
-  const preview = document.getElementById("game-preview");
-  const iframe = document.getElementById("gameIframe");
-  const blob = new Blob([gameHtml],{type:"text/html"});
-  iframe.src = URL.createObjectURL(blob);
-  preview.style.display="block";
-}
-function closePreview(){
-  document.getElementById("game-preview").style.display="none";
+</body>
+</html>`;
+  zip.file("index.html", gameIndexHtml);
+  // 打包并下载
+  const zipBlob = await zip.generateAsync({type:"blob"});
+  saveAs(zipBlob, state.projectName+"_游戏项目.zip");
+  alert("游戏项目zip已下载！解压后可以上传到Github仓库");
 }
 window.onload = loadLocal;
 </script>
