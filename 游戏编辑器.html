@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>网页游戏编辑器</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui, sans-serif;}
+body{background:#1a1a22;color:#eee;height:100vh;display:flex;flex-direction:column;}
+header{background:#282838;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #444;}
+button{padding:8px 14px;background:#4060c0;color:#fff;border:none;border-radius:6px;cursor:pointer;}
+button.danger{background:#b83838;}
+button.success{background:#289858;}
+button:hover{opacity:0.9}
+input,textarea,select{padding:7px;background:#222633;border:1px solid #555;color:#fff;border-radius:4px;}
+#main{display:flex;flex:1;overflow:hidden;}
+#left{width:320px;background:#222633;border-right:1px solid #444;display:flex;flex-direction:column;}
+.tabs{display:flex;}
+.tab{flex:1;text-align:center;padding:8px;cursor:pointer;background:#333848;}
+.tab.active{background:#4060c0;}
+.search-bar{padding:8px;}
+.item-list{flex:1;overflow:auto;padding:8px;}
+.list-item{padding:8px;background:#2c3040;margin:4px 0;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;}
+.list-item:hover{background:#383c50;}
+.list-item.selected{border:1px solid #6088ff;}
+#right{flex:1;padding:16px;overflow:auto;}
+.form-row{margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+label{width:120px;}
+.preview-box{margin:10px 0;padding:10px;background:#111;border-radius:6px;}
+.anim-preview{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
+.anim-frame{width:60px;height:60px;background:#333;object-fit:contain;}
+#game-preview{position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;display:none;z-index:99;}
+.close-preview{position:absolute;top:10px;right:10px;z-index:100;}
+</style>
+</head>
+<body>
+<header>
+  <input id="projectName" placeholder="项目名称" value="新项目">
+  <select id="gameType">
+    <option value="idle">放置游戏</option>
+    <option value="rpg">RPG游戏</option>
+    <option value="action">横版动作</option>
+    <option value="turn">回合制</option>
+  </select>
+  <textarea id="gameDesc" placeholder="填写游戏玩法描述..." style="width:300px;height:36px;"></textarea>
+  <button onclick="newProject()">新建项目</button>
+  <button onclick="exportJson()">导出JSON</button>
+  <button onclick="importJson()">导入JSON</button>
+  <button class="success" onclick="genGameCode()">生成游戏代码</button>
+  <button class="success" onclick="startGame()">开始游戏</button>
+</header>
+<div id="main">
+  <div id="left">
+    <div class="tabs">
+      <div class="tab active" data-type="item">物品</div>
+      <div class="tab" data-type="npc">NPC</div>
+      <div class="tab" data-type="monster">怪物</div>
+      <div class="tab" data-type="skill">技能</div>
+    </div>
+    <div class="search-bar">
+      <input id="searchInput" placeholder="搜索ID/名称" style="width:100%" oninput="renderList()">
+    </div>
+    <div class="item-list" id="listWrap"></div>
+    <div style="padding:8px">
+      <button style="width:100%" onclick="addNewItem()">新建条目</button>
+    </div>
+  </div>
+  <div id="right">
+    <div id="editorForm"></div>
+    <div class="preview-box">
+      <h3>动画预览</h3>
+      <div class="form-row">
+        <label>帧间隔(ms)</label>
+        <input type="number" id="frameDelay" value="150">
+        <button onclick="playAnim()">播放</button>
+        <button onclick="stopAnim()">停止</button>
+      </div>
+      <div class="anim-preview" id="animBox"></div>
+      <input type="file" id="animUpload" accept="image/*" multiple onchange="onAnimUpload(event)">
+    </div>
+  </div>
+</div>
+
+<div id="game-preview">
+  <button class="close-preview" onclick="closePreview()">关闭预览</button>
+  <iframe id="gameIframe" style="width:100%;height:100%;border:none;"></iframe>
+</div>
+
+<script>
+let state = {
+  projectName:"新项目",
+  gameType:"idle",
+  gameDesc:"",
+  currentType:"item",
+  selectedId:null,
+  data:{
+    item:[],npc:[],monster:[],skill:[]
+  },
+  animFrames:[],
+  animTimer:null
+};
+
+// 本地存储
+function saveLocal(){
+  localStorage.setItem("gameEditorData", JSON.stringify(state));
+}
+function loadLocal(){
+  const s = localStorage.getItem("gameEditorData");
+  if(s) state = JSON.parse(s);
+  bindTabs();
+  renderList();
+}
+function bindTabs(){
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.onclick = ()=>{
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      t.classList.add("active");
+      state.currentType = t.dataset.type;
+      state.selectedId = null;
+      renderList();
+      renderForm();
+    }
+  })
+}
+function renderList(){
+  const wrap = document.getElementById("listWrap");
+  const keyword = document.getElementById("searchInput").value.toLowerCase();
+  const arr = state.data[state.currentType].filter(it=>{
+    return it.id.toLowerCase().includes(keyword) || it.name.toLowerCase().includes(keyword);
+  });
+  let html = "";
+  arr.forEach(it=>{
+    html += `
+    <div class="list-item ${state.selectedId===it.id?'selected':''}" onclick="selectItem('${it.id}')">
+      <span>${it.id} - ${it.name}</span>
+      <button class="danger" style="padding:2px 6px" onclick="delItem('${it.id}');event.stopPropagation()">删除</button>
+    </div>`;
+  })
+  wrap.innerHTML = html;
+}
+function selectItem(id){
+  state.selectedId = id;
+  renderList();
+  renderForm();
+}
+function addNewItem(){
+  const id = "obj_"+Date.now();
+  const empty = {
+    id, name:"新对象", desc:"", icon:"",
+    frames:[], frameDelay:150,
+    // 物品
+    type:"consume", stack:99, price:10, attr:"",
+    // NPC
+    dialog:"", x:0,y:0,interact:true,
+    //怪物
+    hp:100,atk:10,def:5,drop:"",
+    //技能
+    dmg:20,cd:1000,cost:0,target:"enemy"
+  };
+  state.data[state.currentType].push(empty);
+  state.selectedId = id;
+  renderList();
+  renderForm();
+  saveLocal();
+}
+function delItem(id){
+  state.data[state.currentType] = state.data[state.currentType].filter(x=>x.id!==id);
+  state.selectedId=null;
+  renderList();
+  renderForm();
+  saveLocal();
+}
+function renderForm(){
+  const wrap = document.getElementById("editorForm");
+  const obj = state.data[state.currentType].find(x=>x.id===state.selectedId);
+  if(!obj){wrap.innerHTML="<div>请在左侧选择或新建条目</div>";return;}
+  let html = `
+  <div class="form-row"><label>ID</label><input value="${obj.id}" onchange="updateField('id',this.value)"></div>
+  <div class="form-row"><label>名称</label><input value="${obj.name}" onchange="updateField('name',this.value)"></div>
+  <div class="form-row"><label>描述</label><textarea style="width:240px;height:60px" onchange="updateField('desc',this.value)">${obj.desc}</textarea></div>
+  <div class="form-row"><label>图标</label><input type="file" accept="image/*" onchange="uploadIcon(event)">${obj.icon?`<img src="${obj.icon}" style="width:40px">`:""}</div>
+  `;
+  if(state.currentType === "item"){
+    html += `
+    <div class="form-row"><label>物品类型</label>
+    <select onchange="updateField('type',this.value)">
+      <option value="consume" ${obj.type==='consume'?'selected':''}>消耗品</option>
+      <option value="equip" ${obj.type==='equip'?'selected':''}>装备</option>
+      <option value="material" ${obj.type==='material'?'selected':''}>材料</option>
+    </select></div>
+    <div class="form-row"><label>堆叠上限</label><input type="number" value="${obj.stack}" onchange="updateField('stack',Number(this.value))"></div>
+    <div class="form-row"><label>价格</label><input type="number" value="${obj.price}" onchange="updateField('price',Number(this.value))"></div>
+    <div class="form-row"><label>属性文本</label><input value="${obj.attr}" onchange="updateField('attr',this.value)"></div>
+    `
+  }else if(state.currentType === "npc"){
+    html += `
+    <div class="form-row"><label>对话内容</label><textarea style="width:240px;height:60px" onchange="updateField('dialog',this.value)">${obj.dialog}</textarea></div>
+    <div class="form-row"><label>坐标X</label><input type="number" value="${obj.x}" onchange="updateField('x',Number(this.value))"></div>
+    <div class="form-row"><label>坐标Y</label><input type="number" value="${obj.y}" onchange="updateField('y',Number(this.value))"></div>
+    <div class="form-row"><label>可交互</label><input type="checkbox" ${obj.interact?'checked':''} onchange="updateField('interact',this.checked)"></div>
+    `
+  }else if(state.currentType === "monster"){
+    html += `
+    <div class="form-row"><label>血量</label><input type="number" value="${obj.hp}" onchange="updateField('hp',Number(this.value))"></div>
+    <div class="form-row"><label>攻击力</label><input type="number" value="${obj.atk}" onchange="updateField('atk',Number(this.value))"></div>
+    <div class="form-row"><label>防御力</label><input type="number" value="${obj.def}" onchange="updateField('def',Number(this.value))"></div>
+    <div class="form-row"><label>掉落物品ID</label><input value="${obj.drop}" onchange="updateField('drop',this.value)"></div>
+    `
+  }else if(state.currentType === "skill"){
+    html += `
+    <div class="form-row"><label>伤害</label><input type="number" value="${obj.dmg}" onchange="updateField('dmg',Number(this.value))"></div>
+    <div class="form-row"><label>冷却(ms)</label><input type="number" value="${obj.cd}" onchange="updateField('cd',Number(this.value))"></div>
+    <div class="form-row"><label>消耗</label><input type="number" value="${obj.cost}" onchange="updateField('cost',Number(this.value))"></div>
+    <div class="form-row"><label>目标</label>
+    <select onchange="updateField('target',this.value)">
+      <option value="enemy" ${obj.target==='enemy'?'selected':''}>敌人</option>
+      <option value="self" ${obj.target==='self'?'selected':''}>自身</option>
+    </select></div>
+    `
+  }
+  wrap.innerHTML = html;
+  state.animFrames = obj.frames || [];
+  renderAnimBox();
+}
+function updateField(key,val){
+  const obj = state.data[state.currentType].find(x=>x.id===state.selectedId);
+  if(!obj) return;
+  obj[key] = val;
+  saveLocal();
+}
+function uploadIcon(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    updateField("icon", ev.target.result);
+    renderForm();
+  }
+  reader.readAsDataURL(file);
+}
+function onAnimUpload(e){
+  const files = Array.from(e.target.files);
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      state.animFrames.push(ev.target.result);
+      const obj = state.data[state.currentType].find(x=>x.id===state.selectedId);
+      obj.frames = state.animFrames;
+      saveLocal();
+      renderAnimBox();
+    }
+    reader.readAsDataURL(file);
+  })
+}
+function renderAnimBox(){
+  const box = document.getElementById("animBox");
+  let html = "";
+  state.animFrames.forEach((src,i)=>{
+    html += `<img class="anim-frame" src="${src}" onclick="removeFrame(${i})">`
+  })
+  box.innerHTML = html;
+}
+function removeFrame(idx){
+  state.animFrames.splice(idx,1);
+  const obj = state.data[state.currentType].find(x=>x.id===state.selectedId);
+  obj.frames = state.animFrames;
+  saveLocal();
+  renderAnimBox();
+}
+function playAnim(){
+  stopAnim();
+  const delay = Number(document.getElementById("frameDelay").value);
+  const box = document.getElementById("animBox");
+  let i=0;
+  state.animTimer = setInterval(()=>{
+    i = (i+1) % state.animFrames.length;
+    box.innerHTML = `<img class="anim-frame" src="${state.animFrames[i]}">`
+  },delay);
+}
+function stopAnim(){
+  if(state.animTimer) clearInterval(state.animTimer);
+  state.animTimer = null;
+  renderAnimBox();
+}
+function newProject(){
+  if(!confirm("新建项目会清空当前数据，确认？")) return;
+  state = {
+    projectName:"新项目",
+    gameType:"idle",
+    gameDesc:"",
+    currentType:"item",
+    selectedId:null,
+    data:{item:[],npc:[],monster:[],skill:[]},
+    animFrames:[],animTimer:null
+  };
+  saveLocal();
+  document.getElementById("projectName").value = state.projectName;
+  document.getElementById("gameType").value = state.gameType;
+  document.getElementById("gameDesc").value = state.gameDesc;
+  renderList();renderForm();
+}
+function exportJson(){
+  state.projectName = document.getElementById("projectName").value;
+  state.gameType = document.getElementById("gameType").value;
+  state.gameDesc = document.getElementById("gameDesc").value;
+  saveLocal();
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = state.projectName+".json";
+  a.click();
+}
+function importJson(){
+  const ipt = document.createElement("input");
+  ipt.type="file";ipt.accept=".json";
+  ipt.onchange = e=>{
+    const f = e.target.files[0];
+    const r = new FileReader();
+    r.onload = ev=>{
+      state = JSON.parse(ev.target.result);
+      saveLocal();
+      document.getElementById("projectName").value = state.projectName;
+      document.getElementById("gameType").value = state.gameType;
+      document.getElementById("gameDesc").value = state.gameDesc;
+      renderList();renderForm();
+      alert("导入成功");
+    }
+    r.readAsText(f);
+  }
+  ipt.click();
+}
+function genGameCode(){
+  state.projectName = document.getElementById("projectName").value;
+  state.gameType = document.getElementById("gameType").value;
+  state.gameDesc = document.getElementById("gameDesc").value;
+  const prompt = `
+请根据下面游戏项目配置，生成完整可运行的网页游戏HTML代码。
+项目名称：${state.projectName}
+游戏类型：${state.gameType}
+玩法描述：${state.gameDesc}
+游戏数据：${JSON.stringify(state.data)}
+要求：读取上面物品、NPC、怪物、技能数据，做成网页游戏，能运行。
+`;
+  navigator.clipboard.writeText(prompt).then(()=>{
+    alert("生成游戏代码的提示词已经复制到剪贴板！直接粘贴发给豆包，就能生成游戏源码");
+  }).catch(()=>alert(prompt));
+}
+function startGame(){
+  state.projectName = document.getElementById("projectName").value;
+  state.gameType = document.getElementById("gameType").value;
+  state.gameDesc = document.getElementById("gameDesc").value;
+  saveLocal();
+  const gameData = JSON.stringify(state.data);
+  // 简单内置游戏预览页面，加载数据
+  const gameHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>${state.projectName}</title></head>
+<body style="background:#111;color:#fff;padding:20px;">
+<h1>${state.projectName}</h1>
+<p>游戏类型：${state.gameType}</p>
+<p>玩法：${state.gameDesc}</p>
+<h3>已加载的游戏数据</h3>
+<pre>${gameData}</pre>
+<script>
+// 这里就是你的游戏，豆包生成代码后会替换这部分
+const GAME_DATA = ${gameData};
+console.log("游戏数据", GAME_DATA);
+</script>
+</body></html>
+`;
+  const preview = document.getElementById("game-preview");
+  const iframe = document.getElementById("gameIframe");
+  const blob = new Blob([gameHtml],{type:"text/html"});
+  iframe.src = URL.createObjectURL(blob);
+  preview.style.display="block";
+}
+function closePreview(){
+  document.getElementById("game-preview").style.display="none";
+}
+window.onload = loadLocal;
+</script>
+</body>
+</html>
