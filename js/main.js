@@ -194,6 +194,7 @@ window.onload = loadGameData;
 </script>
 </body>
 </html>`;
+
 // 用户自定义AI游戏模板持久化
 let userCustomGameTemplate = "";
 const CUSTOM_TPL_STORAGE_KEY = "editor_custom_game_template";
@@ -217,6 +218,7 @@ function getActiveGameTemplate(){
   }
   return IDLE_GAME_TEMPLATE_HTML;
 }
+
 let currentEditItemIndex = -1;
 let currentEditNpcIndex = -1;
 let currentEditMonsterIndex = -1;
@@ -230,6 +232,7 @@ let animFrames = [];
 let animPreviewTimer = null;
 let animPreviewCanvas, animPreviewCtx;
 let selectedRowIndex = -1;
+
 function isIdDuplicate(arr, id, skipIndex = -1) {
   const tid = id.trim();
   for (let i = 0; i < arr.length; i++) {
@@ -238,9 +241,11 @@ function isIdDuplicate(arr, id, skipIndex = -1) {
   }
   return false;
 }
+
 function cloneObj(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
+
 function setSelectedRow(domWrap, idx) {
   selectedRowIndex = idx;
   const trs = domWrap.querySelectorAll("tbody tr");
@@ -249,6 +254,7 @@ function setSelectedRow(domWrap, idx) {
     trs[idx].classList.add("row-active");
   }
 }
+
 function renderEditorPanel(modId) {
   currentEditItemIndex = -1;
   currentEditNpcIndex = -1;
@@ -257,9 +263,11 @@ function renderEditorPanel(modId) {
   currentEditMapIndex = -1;
   currentEditAnimIndex = -1;
   selectedRowIndex = -1;
+
   const ed = document.getElementById("editor");
   let title = "";
   let bodyHtml = "";
+
   if (modId === "overview") {
     title = "项目概览";
     const prj = ProjectManager.currentProject;
@@ -587,7 +595,7 @@ function renderEditorPanel(modId) {
 <button class="btn btn-primary" onclick="applyCustomTemplate()">✅应用此模板</button>
 <button class="btn btn-danger" onclick="resetCustomTemplateUi()">🔄重置为系统默认模板</button>
 </div>
-<div style="margin-top:10px;color:var(--text‑3);font-size:12px;">
+<div style="margin-top:10px;color:var(--text-3);font-size:12px;">
 当前状态：<span id="tplStatusText">未使用自定义AI模板，使用系统内置模板</span>
 </div>
 </div>
@@ -596,21 +604,23 @@ function renderEditorPanel(modId) {
 <div class="form-grid">
 <div class="form-row full">
 <label>后端API地址</label>
-<input id="backendApiUrlInput" value="${localStorage.getItem('backendApiUrl')||'http://localhost:3000'}">
+<input id="backendApiUrlInput" value="${localStorage.getItem('backendApiUrl') || 'http://localhost:3000'}">
 </div>
 </div>
 <div class="btn-group" style="margin-top:12px">
 <button class="btn btn-primary" onclick="publishConfigToBackend()">📤发布配置到游戏后端</button>
 </div>
 <div id="publishBackendStatus" style="margin-top:8px;font-size:12px;"></div>
-<p style="margin-top:8px;font-size:12px;color:var(--text‑3)">
+<p style="margin-top:8px;font-size:12px;color:var(--text-3)">
 修改怪物/技能/物品后，点击按钮热更新后端游戏配置；玩家刷新前端即可生效。
 </p>
 </div>`;
   }
+
   ed.innerHTML = `
 <div class="editor-header"><div class="editor-title">${title}</div><div></div></div>
 <div class="editor-body">${bodyHtml}</div>`;
+
   setTimeout(() => {
     if (modId === "item") renderItemList();
     if (modId === "npc") renderNpcList();
@@ -620,6 +630,7 @@ function renderEditorPanel(modId) {
     if (modId === "anim-list") renderAnimList();
   }, 60);
 }
+
 // 导出模块模板UI交互
 function applyCustomTemplate(){
   const tplText = document.getElementById("customTplInput").value;
@@ -630,12 +641,14 @@ function applyCustomTemplate(){
   saveCustomTemplate(tplText);
   document.getElementById("tplStatusText").innerText = "✅已启用用户自定义AI生成模板（浏览器本地已保存，刷新页面不丢失）";
 }
+
 function resetCustomTemplateUi(){
   if(!confirm("确定要重置为系统默认放置模板？自定义粘贴的AI模板会被清空！")) return;
   resetCustomTemplate();
   document.getElementById("customTplInput").value = "";
   document.getElementById("tplStatusText").innerText = "未使用自定义AI模板，使用系统内置模板";
 }
+
 // 打包函数
 async function generateGameZip() {
   const p = ProjectManager.currentProject;
@@ -654,6 +667,7 @@ async function generateGameZip() {
   saveAs(blob, (p.name || "game_release") + ".zip");
   log("导出", "✅成品游戏ZIP打包完成，已经开始下载！");
 }
+
 function saveGameConfig() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "无打开项目"); return; }
@@ -671,14 +685,17 @@ function saveGameConfig() {
   c.enableOffline = document.getElementById("cf_enableOffline").value === "true";
   c.maxOfflineSec = Number(document.getElementById("cf_maxOfflineSec").value);
   c.deathResetStage = document.getElementById("cf_deathResetStage").value === "true";
+
   const rawMonsterIds = document.getElementById("cf_battleMonsterIdList").value.split(",")
-    .map(s=>s.trim())
-    .filter(s=>s.length>0);
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
   c.battleMonsterIdList = rawMonsterIds;
+
   ProjectManager.saveLocal();
   log("配置", "游戏基础配置已保存（放置挂机参数已写入）");
 }
-//物品
+
+// 物品
 function openItemEditor() {
   currentEditItemIndex = -1;
   document.getElementById("itemId").value = "";
@@ -692,7 +709,11 @@ function openItemEditor() {
   document.getElementById("itemNote").value = "";
   document.getElementById("itemEditCard").style.display = "block";
 }
-function closeItemEditor() { document.getElementById("itemEditCard").style.display = "none"; }
+
+function closeItemEditor() {
+  document.getElementById("itemEditCard").style.display = "none";
+}
+
 function saveItem() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -715,22 +736,31 @@ function saveItem() {
     return;
   }
   if (currentEditItemIndex === -1) {
-    items.push(d); log("物品", `新增：${d.name} | ID:${d.id}`);
+    items.push(d);
+    log("物品", `新增：${d.name} | ID:${d.id}`);
   } else {
-    items[currentEditItemIndex] = d; log("物品", `修改：${d.name} | ID:${d.id}`);
+    items[currentEditItemIndex] = d;
+    log("物品", `修改：${d.name} | ID:${d.id}`);
   }
   ProjectManager.saveLocal();
   closeItemEditor();
   renderItemList();
 }
-function filterItemList(keyword) { renderItemList(keyword); }
+
+function filterItemList(keyword) {
+  renderItemList(keyword);
+}
+
 function renderItemList(filter = "") {
   const wrap = document.getElementById("itemListWrap");
   const arr = ProjectManager.currentProject?.items || [];
   let list = arr;
   const kw = filter.toLowerCase().trim();
   if (kw) list = arr.filter(x => x.id.toLowerCase().includes(kw) || x.name.toLowerCase().includes(kw));
-  if (list.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无匹配物品</p>"; return; }
+  if (list.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>暂无匹配物品</p>";
+    return;
+  }
   let h = `<table style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>类型</th><th>售价</th><th>堆叠</th><th>操作</th></tr></thead><tbody>`;
   list.forEach((it, idx) => {
@@ -748,6 +778,7 @@ function renderItemList(filter = "") {
   h += "</tbody></table>";
   wrap.innerHTML = h;
 }
+
 function editItem(idx) {
   const it = ProjectManager.currentProject.items[idx];
   currentEditItemIndex = idx;
@@ -762,6 +793,7 @@ function editItem(idx) {
   document.getElementById("itemNote").value = it.note || "";
   document.getElementById("itemEditCard").style.display = "block";
 }
+
 function deleteItem(idx) {
   const it = ProjectManager.currentProject.items[idx];
   if (!confirm(`确定删除物品【${it.name}】?`)) return;
@@ -770,6 +802,7 @@ function deleteItem(idx) {
   renderItemList();
   log("物品", `删除：${it.name} | ID:${it.id}`);
 }
+
 function duplicateItem() {
   if (currentEditItemIndex === -1) { alert("请先编辑/选中一条物品再复制"); return; }
   const src = ProjectManager.currentProject.items[currentEditItemIndex];
@@ -781,7 +814,8 @@ function duplicateItem() {
   log("物品", `复制生成副本 ID:${cp.id}`);
   renderItemList();
 }
-//NPC
+
+// NPC
 function openNpcEditor() {
   currentEditNpcIndex = -1;
   document.getElementById("npcId").value = "";
@@ -794,7 +828,11 @@ function openNpcEditor() {
   document.getElementById("npcNote").value = "";
   document.getElementById("npcEditCard").style.display = "block";
 }
-function closeNpcEditor() { document.getElementById("npcEditCard").style.display = "none"; }
+
+function closeNpcEditor() {
+  document.getElementById("npcEditCard").style.display = "none";
+}
+
 function saveNpc() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -812,32 +850,53 @@ function saveNpc() {
   };
   if (!d.id || !d.name) { log("警告", "NPC ID、名称不能为空"); return; }
   if (isIdDuplicate(arr, d.id, currentEditNpcIndex)) {
-    log("错误", `NPC ID【${d.id}】已存在`); alert(`NPC ID【${d.id}】已存在！`); return;
+    log("错误", `NPC ID【${d.id}】已存在`);
+    alert(`NPC ID【${d.id}】已存在！`);
+    return;
   }
-  if (currentEditNpcIndex === -1) { arr.push(d); log("NPC", `新增：${d.name} | ID:${d.id}`); }
-  else { arr[currentEditNpcIndex] = d; log("NPC", `修改：${d.name} | ID:${d.id}`); }
-  ProjectManager.saveLocal(); closeNpcEditor(); renderNpcList();
+  if (currentEditNpcIndex === -1) {
+    arr.push(d);
+    log("NPC", `新增：${d.name} | ID:${d.id}`);
+  } else {
+    arr[currentEditNpcIndex] = d;
+    log("NPC", `修改：${d.name} | ID:${d.id}`);
+  }
+  ProjectManager.saveLocal();
+  closeNpcEditor();
+  renderNpcList();
 }
-function filterNpcList(kw) { renderNpcList(kw); }
+
+function filterNpcList(kw) {
+  renderNpcList(kw);
+}
+
 function renderNpcList(filter = "") {
   const wrap = document.getElementById("npcListWrap");
   const arr = ProjectManager.currentProject?.npcs || [];
   let list = arr;
   const k = filter.toLowerCase().trim();
   if (k) list = arr.filter(x => x.id.toLowerCase().includes(k) || x.name.toLowerCase().includes(k));
-  if (list.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无匹配NPC</p>"; return; }
+  if (list.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>暂无匹配NPC</p>";
+    return;
+  }
   let h = `<table style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>类型</th><th>地图ID</th><th>操作</th></tr></thead><tbody>`;
   list.forEach((it, idx) => {
     h += `<tr class="${selectedRowIndex === idx ? 'row-active' : ''}" onclick="setSelectedRow(document.getElementById('npcListWrap'),${idx})" style="border-bottom:1px solid var(--border);cursor:pointer;">
-<td>${it.id}</td><td>${it.name}</td><td>${it.type}</td><td>${it.mapId||""}</td>
+<td>${it.id}</td>
+<td>${it.name}</td>
+<td>${it.type}</td>
+<td>${it.mapId || ""}</td>
 <td>
 <button class="btn" onclick="event.stopPropagation();editNpc(${arr.indexOf(it)})">编辑</button>
 <button class="btn btn-danger" onclick="event.stopPropagation();deleteNpc(${arr.indexOf(it)})">删除</button>
 </td></tr>`;
   });
-  h += "</tbody></table>"; wrap.innerHTML = h;
+  h += "</tbody></table>";
+  wrap.innerHTML = h;
 }
+
 function editNpc(idx) {
   const it = ProjectManager.currentProject.npcs[idx];
   currentEditNpcIndex = idx;
@@ -851,20 +910,29 @@ function editNpc(idx) {
   document.getElementById("npcNote").value = it.note || "";
   document.getElementById("npcEditCard").style.display = "block";
 }
+
 function deleteNpc(idx) {
   const it = ProjectManager.currentProject.npcs[idx];
   if (!confirm(`删除NPC【${it.name}】?`)) return;
-  ProjectManager.currentProject.npcs.splice(idx, 1); ProjectManager.saveLocal(); renderNpcList();
+  ProjectManager.currentProject.npcs.splice(idx, 1);
+  ProjectManager.saveLocal();
+  renderNpcList();
   log("NPC", `删除：${it.name} | ID:${it.id}`);
 }
+
 function duplicateNpc() {
   if (currentEditNpcIndex === -1) { alert("请先编辑选中NPC"); return; }
   const src = ProjectManager.currentProject.npcs[currentEditNpcIndex];
-  const cp = cloneObj(src); cp.id += "_copy"; cp.name += "(副本)";
-  ProjectManager.currentProject.npcs.push(cp); ProjectManager.saveLocal();
-  log("NPC", `复制副本 ID:${cp.id}`); renderNpcList();
+  const cp = cloneObj(src);
+  cp.id += "_copy";
+  cp.name += "(副本)";
+  ProjectManager.currentProject.npcs.push(cp);
+  ProjectManager.saveLocal();
+  log("NPC", `复制副本 ID:${cp.id}`);
+  renderNpcList();
 }
-//怪物
+
+// 怪物
 function openMonsterEditor() {
   currentEditMonsterIndex = -1;
   document.getElementById("monsterId").value = "";
@@ -880,7 +948,11 @@ function openMonsterEditor() {
   document.getElementById("monsterNote").value = "";
   document.getElementById("monsterEditCard").style.display = "block";
 }
-function closeMonsterEditor() { document.getElementById("monsterEditCard").style.display = "none"; }
+
+function closeMonsterEditor() {
+  document.getElementById("monsterEditCard").style.display = "none";
+}
+
 function saveMonster() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -901,32 +973,56 @@ function saveMonster() {
   };
   if (!d.id || !d.name) { log("警告", "怪物ID、名称不能为空"); return; }
   if (isIdDuplicate(arr, d.id, currentEditMonsterIndex)) {
-    log("错误", `怪物ID【${d.id}】已存在`); alert(`怪物ID【${d.id}】已存在！`); return;
+    log("错误", `怪物ID【${d.id}】已存在`);
+    alert(`怪物ID【${d.id}】已存在！`);
+    return;
   }
-  if (currentEditMonsterIndex === -1) { arr.push(d); log("怪物", `新增：${d.name} | ID:${d.id}`); }
-  else { arr[currentEditMonsterIndex] = d; log("怪物", `修改：${d.name} | ID:${d.id}`); }
-  ProjectManager.saveLocal(); closeMonsterEditor(); renderMonsterList();
+  if (currentEditMonsterIndex === -1) {
+    arr.push(d);
+    log("怪物", `新增：${d.name} | ID:${d.id}`);
+  } else {
+    arr[currentEditMonsterIndex] = d;
+    log("怪物", `修改：${d.name} | ID:${d.id}`);
+  }
+  ProjectManager.saveLocal();
+  closeMonsterEditor();
+  renderMonsterList();
 }
-function filterMonsterList(kw) { renderMonsterList(kw); }
+
+function filterMonsterList(kw) {
+  renderMonsterList(kw);
+}
+
 function renderMonsterList(filter = "") {
   const wrap = document.getElementById("monsterListWrap");
   const arr = ProjectManager.currentProject?.monsters || [];
   let list = arr;
   const k = filter.toLowerCase().trim();
   if (k) list = arr.filter(x => x.id.toLowerCase().includes(k) || x.name.toLowerCase().includes(k));
-  if (list.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无匹配怪物</p>"; return; }
+  if (list.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>暂无匹配怪物</p>";
+    return;
+  }
   let h = `<table style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>HP</th><th>ATK</th><th>DEF</th><th>金币</th><th>EXP</th><th>操作</th></tr></thead><tbody>`;
   list.forEach((it, idx) => {
     h += `<tr class="${selectedRowIndex === idx ? 'row-active' : ''}" onclick="setSelectedRow(document.getElementById('monsterListWrap'),${idx})" style="border-bottom:1px solid var(--border);cursor:pointer;">
-<td>${it.id}</td><td>${it.name}</td><td>${it.hp}</td><td>${it.atk}</td><td>${it.def??0}</td><td>${it.gold}</td><td>${it.exp??20}</td>
+<td>${it.id}</td>
+<td>${it.name}</td>
+<td>${it.hp}</td>
+<td>${it.atk}</td>
+<td>${it.def ?? 0}</td>
+<td>${it.gold}</td>
+<td>${it.exp ?? 20}</td>
 <td>
 <button class="btn" onclick="event.stopPropagation();editMonster(${arr.indexOf(it)})">编辑</button>
 <button class="btn btn-danger" onclick="event.stopPropagation();deleteMonster(${arr.indexOf(it)})">删除</button>
 </td></tr>`;
   });
-  h += "</tbody></table>"; wrap.innerHTML = h;
+  h += "</tbody></table>";
+  wrap.innerHTML = h;
 }
+
 function editMonster(idx) {
   const it = ProjectManager.currentProject.monsters[idx];
   currentEditMonsterIndex = idx;
@@ -943,20 +1039,29 @@ function editMonster(idx) {
   document.getElementById("monsterNote").value = it.note || "";
   document.getElementById("monsterEditCard").style.display = "block";
 }
+
 function deleteMonster(idx) {
   const it = ProjectManager.currentProject.monsters[idx];
   if (!confirm(`删除怪物【${it.name}】?`)) return;
-  ProjectManager.currentProject.monsters.splice(idx, 1); ProjectManager.saveLocal(); renderMonsterList();
+  ProjectManager.currentProject.monsters.splice(idx, 1);
+  ProjectManager.saveLocal();
+  renderMonsterList();
   log("怪物", `删除：${it.name} | ID:${it.id}`);
 }
+
 function duplicateMonster() {
   if (currentEditMonsterIndex === -1) { alert("请先编辑选中怪物"); return; }
   const src = ProjectManager.currentProject.monsters[currentEditMonsterIndex];
-  const cp = cloneObj(src); cp.id += "_copy"; cp.name += "(副本)";
-  ProjectManager.currentProject.monsters.push(cp); ProjectManager.saveLocal();
-  log("怪物", `复制副本 ID:${cp.id}`); renderMonsterList();
+  const cp = cloneObj(src);
+  cp.id += "_copy";
+  cp.name += "(副本)";
+  ProjectManager.currentProject.monsters.push(cp);
+  ProjectManager.saveLocal();
+  log("怪物", `复制副本 ID:${cp.id}`);
+  renderMonsterList();
 }
-//技能
+
+// 技能
 function openSkillEditor() {
   currentEditSkillIndex = -1;
   document.getElementById("skillId").value = "";
@@ -971,7 +1076,11 @@ function openSkillEditor() {
   document.getElementById("skillNote").value = "";
   document.getElementById("skillEditCard").style.display = "block";
 }
-function closeSkillEditor() { document.getElementById("skillEditCard").style.display = "none"; }
+
+function closeSkillEditor() {
+  document.getElementById("skillEditCard").style.display = "none";
+}
+
 function saveSkill() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -990,32 +1099,55 @@ function saveSkill() {
   };
   if (!d.id || !d.name) { log("警告", "技能ID、名称不能为空"); return; }
   if (isIdDuplicate(arr, d.id, currentEditSkillIndex)) {
-    log("错误", `技能ID【${d.id}】已存在`); alert(`技能ID【${d.id}】已存在！`); return;
+    log("错误", `技能ID【${d.id}】已存在`);
+    alert(`技能ID【${d.id}】已存在！`);
+    return;
   }
-  if (currentEditSkillIndex === -1) { arr.push(d); log("技能", `新增：${d.name} | ID:${d.id}`); }
-  else { arr[currentEditSkillIndex] = d; log("技能", `修改：${d.name} | ID:${d.id}`); }
-  ProjectManager.saveLocal(); closeSkillEditor(); renderSkillList();
+  if (currentEditSkillIndex === -1) {
+    arr.push(d);
+    log("技能", `新增：${d.name} | ID:${d.id}`);
+  } else {
+    arr[currentEditSkillIndex] = d;
+    log("技能", `修改：${d.name} | ID:${d.id}`);
+  }
+  ProjectManager.saveLocal();
+  closeSkillEditor();
+  renderSkillList();
 }
-function filterSkillList(kw) { renderSkillList(kw); }
+
+function filterSkillList(kw) {
+  renderSkillList(kw);
+}
+
 function renderSkillList(filter = "") {
   const wrap = document.getElementById("skillListWrap");
   const arr = ProjectManager.currentProject?.skills || [];
   let list = arr;
   const k = filter.toLowerCase().trim();
   if (k) list = arr.filter(x => x.id.toLowerCase().includes(k) || x.name.toLowerCase().includes(k));
-  if (list.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无匹配技能</p>"; return; }
+  if (list.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>暂无匹配技能</p>";
+    return;
+  }
   let h = `<table style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>类型</th><th>威力</th><th>耗蓝</th><th>CD</th><th>操作</th></tr></thead><tbody>`;
   list.forEach((it, idx) => {
     h += `<tr class="${selectedRowIndex === idx ? 'row-active' : ''}" onclick="setSelectedRow(document.getElementById('skillListWrap'),${idx})" style="border-bottom:1px solid var(--border);cursor:pointer;">
-<td>${it.id}</td><td>${it.name}</td><td>${it.type}</td><td>${it.power}</td><td>${it.mpCost}</td><td>${it.cd??0}</td>
+<td>${it.id}</td>
+<td>${it.name}</td>
+<td>${it.type}</td>
+<td>${it.power}</td>
+<td>${it.mpCost}</td>
+<td>${it.cd ?? 0}</td>
 <td>
 <button class="btn" onclick="event.stopPropagation();editSkill(${arr.indexOf(it)})">编辑</button>
 <button class="btn btn-danger" onclick="event.stopPropagation();deleteSkill(${arr.indexOf(it)})">删除</button>
 </td></tr>`;
   });
-  h += "</tbody></table>"; wrap.innerHTML = h;
+  h += "</tbody></table>";
+  wrap.innerHTML = h;
 }
+
 function editSkill(idx) {
   const it = ProjectManager.currentProject.skills[idx];
   currentEditSkillIndex = idx;
@@ -1031,20 +1163,29 @@ function editSkill(idx) {
   document.getElementById("skillNote").value = it.note || "";
   document.getElementById("skillEditCard").style.display = "block";
 }
+
 function deleteSkill(idx) {
   const it = ProjectManager.currentProject.skills[idx];
   if (!confirm(`删除技能【${it.name}】?`)) return;
-  ProjectManager.currentProject.skills.splice(idx, 1); ProjectManager.saveLocal(); renderSkillList();
+  ProjectManager.currentProject.skills.splice(idx, 1);
+  ProjectManager.saveLocal();
+  renderSkillList();
   log("技能", `删除：${it.name} | ID:${it.id}`);
 }
+
 function duplicateSkill() {
   if (currentEditSkillIndex === -1) { alert("请先编辑选中技能"); return; }
   const src = ProjectManager.currentProject.skills[currentEditSkillIndex];
-  const cp = cloneObj(src); cp.id += "_copy"; cp.name += "(副本)";
-  ProjectManager.currentProject.skills.push(cp); ProjectManager.saveLocal();
-  log("技能", `复制副本 ID:${cp.id}`); renderSkillList();
+  const cp = cloneObj(src);
+  cp.id += "_copy";
+  cp.name += "(副本)";
+  ProjectManager.currentProject.skills.push(cp);
+  ProjectManager.saveLocal();
+  log("技能", `复制副本 ID:${cp.id}`);
+  renderSkillList();
 }
-//地图
+
+// 地图
 function openMapCreator() {
   currentEditMapIndex = -1;
   document.getElementById("mapId").value = "";
@@ -1054,7 +1195,11 @@ function openMapCreator() {
   document.getElementById("mapEditCard").style.display = "block";
   initMapCanvas();
 }
-function closeMapEditor() { document.getElementById("mapEditCard").style.display = "none"; }
+
+function closeMapEditor() {
+  document.getElementById("mapEditCard").style.display = "none";
+}
+
 function initMapCanvas() {
   mapCanvas = document.getElementById("mapCanvas");
   mapCtx = mapCanvas.getContext("2d");
@@ -1067,6 +1212,7 @@ function initMapCanvas() {
   mapCanvas.onmousedown = e => paintTile(e);
   mapCanvas.onmousemove = e => { if (e.buttons === 1) paintTile(e); };
 }
+
 function paintTile(e) {
   const rect = mapCanvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / tileSize);
@@ -1077,6 +1223,7 @@ function paintTile(e) {
     drawMap();
   }
 }
+
 function drawMap() {
   mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
   const colorMap = { "0": "#222222", "1": "#487a38", "2": "#777777", "3": "#3068aa" };
@@ -1088,12 +1235,15 @@ function drawMap() {
     }
   }
 }
+
 function clearMapCanvas() {
   const w = Number(document.getElementById("mapW").value);
   const h = Number(document.getElementById("mapH").value);
-  mapData = Array.from({ length: h }, () => Array(w).fill(0)); drawMap();
+  mapData = Array.from({ length: h }, () => Array(w).fill(0));
+  drawMap();
   log("地图", "画布清空");
 }
+
 function saveMap() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -1107,25 +1257,45 @@ function saveMap() {
   };
   if (!d.id || !d.name) { log("警告", "地图ID、名称不能为空"); return; }
   if (isIdDuplicate(arr, d.id, currentEditMapIndex)) {
-    log("错误", `地图ID【${d.id}】已存在`); alert(`地图ID【${d.id}】已存在！`); return;
+    log("错误", `地图ID【${d.id}】已存在`);
+    alert(`地图ID【${d.id}】已存在！`);
+    return;
   }
-  if (currentEditMapIndex === -1) { arr.push(d); log("地图", `新建：${d.name} | ID:${d.id}`); }
-  else { arr[currentEditMapIndex] = d; log("地图", `修改：${d.name} | ID:${d.id}`); }
-  ProjectManager.saveLocal(); closeMapEditor(); renderMapList();
+  if (currentEditMapIndex === -1) {
+    arr.push(d);
+    log("地图", `新建：${d.name} | ID:${d.id}`);
+  } else {
+    arr[currentEditMapIndex] = d;
+    log("地图", `修改：${d.name} | ID:${d.id}`);
+  }
+  ProjectManager.saveLocal();
+  closeMapEditor();
+  renderMapList();
 }
+
 function renderMapList() {
   const wrap = document.getElementById("mapListWrap");
   const arr = ProjectManager.currentProject?.maps || [];
-  if (arr.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无地图</p>"; return; }
+  if (arr.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>暂无地图</p>";
+    return;
+  }
   let h = `<table style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>尺寸</th><th>操作</th></tr></thead><tbody>`;
   arr.forEach((m, idx) => {
     h += `<tr style="border-bottom:1px solid var(--border);">
-<td>${m.id}</td><td>${m.name}</td><td>${m.width}×${m.height}</td>
-<td><button class="btn" onclick="editMap(${idx})">编辑</button><button class="btn btn-danger" onclick="deleteMap(${idx})">删除</button></td></tr>`;
+<td>${m.id}</td>
+<td>${m.name}</td>
+<td>${m.width}×${m.height}</td>
+<td>
+<button class="btn" onclick="editMap(${idx})">编辑</button>
+<button class="btn btn-danger" onclick="deleteMap(${idx})">删除</button>
+</td></tr>`;
   });
-  h += "</tbody></table>"; wrap.innerHTML = h;
+  h += "</tbody></table>";
+  wrap.innerHTML = h;
 }
+
 function editMap(idx) {
   const m = ProjectManager.currentProject.maps[idx];
   currentEditMapIndex = idx;
@@ -1135,39 +1305,52 @@ function editMap(idx) {
   document.getElementById("mapH").value = m.height;
   document.getElementById("mapEditCard").style.display = "block";
   initMapCanvas();
-  mapData = m.tiles; drawMap();
+  mapData = m.tiles;
+  drawMap();
 }
+
 function deleteMap(idx) {
   const m = ProjectManager.currentProject.maps[idx];
   if (!confirm(`删除地图【${m.name}】?`)) return;
-  ProjectManager.currentProject.maps.splice(idx, 1); ProjectManager.saveLocal(); renderMapList();
+  ProjectManager.currentProject.maps.splice(idx, 1);
+  ProjectManager.saveLocal();
+  renderMapList();
   log("地图", `删除：${m.name} | ID:${m.id}`);
 }
-//动画
+
+// 动画
 function openAnimCreator() {
   currentEditAnimIndex = -1;
   document.getElementById("animId").value = "";
   document.getElementById("animName").value = "";
   document.getElementById("animFrameDelay").value = 150;
-  animFrames = []; refreshAnimFramePreview();
+  animFrames = [];
+  refreshAnimFramePreview();
   document.getElementById("animEditCard").style.display = "block";
   animPreviewCanvas = document.getElementById("animPreviewCanvas");
   animPreviewCtx = animPreviewCanvas.getContext("2d");
   stopAnimPreview();
 }
-function closeAnimEditor() { stopAnimPreview(); document.getElementById("animEditCard").style.display = "none"; }
+
+function closeAnimEditor() {
+  stopAnimPreview();
+  document.getElementById("animEditCard").style.display = "none";
+}
+
 function addAnimFrames(input) {
   const files = Array.from(input.files);
   files.forEach(f => {
     const r = new FileReader();
     r.onload = ev => {
-      const img = new Image(); img.src = ev.target.result;
+      const img = new Image();
+      img.src = ev.target.result;
       animFrames.push({ src: ev.target.result, img: img });
       refreshAnimFramePreview();
     };
     r.readAsDataURL(f);
   });
 }
+
 function refreshAnimFramePreview() {
   const wrap = document.getElementById("animFramePreviewWrap");
   let h = "";
@@ -1179,7 +1362,12 @@ function refreshAnimFramePreview() {
   });
   wrap.innerHTML = h;
 }
-function removeAnimFrame(idx) { animFrames.splice(idx, 1); refreshAnimFramePreview(); }
+
+function removeAnimFrame(idx) {
+  animFrames.splice(idx, 1);
+  refreshAnimFramePreview();
+}
+
 function playAnimPreview() {
   stopAnimPreview();
   const delay = Number(document.getElementById("animFrameDelay").value);
@@ -1191,10 +1379,13 @@ function playAnimPreview() {
     fi = (fi + 1) % animFrames.length;
   }, delay);
 }
+
 function stopAnimPreview() {
-  if (animPreviewTimer) clearInterval(animPreviewTimer); animPreviewTimer = null;
+  if (animPreviewTimer) clearInterval(animPreviewTimer);
+  animPreviewTimer = null;
   if (animPreviewCtx) animPreviewCtx.clearRect(0, 0, 128, 128);
 }
+
 function saveAnimation() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -1207,8 +1398,138 @@ function saveAnimation() {
   };
   if (!d.id || !d.name) { log("警告", "动画ID、名称不能为空"); return; }
   if (isIdDuplicate(arr, d.id, currentEditAnimIndex)) {
-    log("错误", `动画ID【${d.id}】已存在`); alert(`动画ID【${d.id}】已存在！`); return;
+    log("错误", `动画ID【${d.id}】已存在`);
+    alert(`动画ID【${d.id}】已存在！`);
+    return;
   }
-  if (currentEditAnimIndex === -1) { arr.push(d); log("动画", `新建：${d.name} | ID:${d.id}`); }
-  else { arr[currentEditAnimIndex] = d; log("动画", `修改：${d.name} | ID:${d.id}`); }
-  Project
+  if (currentEditAnimIndex === -1) {
+    arr.push(d);
+    log("动画", `新建：${d.name} | ID:${d.id}`);
+  } else {
+    arr[currentEditAnimIndex] = d;
+    log("动画", `修改：${d.name} | ID:${d.id}`);
+  }
+  ProjectManager.saveLocal();
+  closeAnimEditor();
+  renderAnimList();
+}
+
+function renderAnimList() {
+  const wrap = document.getElementById("animListWrap");
+  const arr = ProjectManager.currentProject?.animations || [];
+  if (arr.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>暂无动画</p>";
+    return;
+  }
+  let h = `<table style="width:100%;border-collapse:collapse;">
+<thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>帧数</th><th>操作</th></tr></thead><tbody>`;
+  arr.forEach((a, idx) => {
+    h += `<tr style="border-bottom:1px solid var(--border);">
+<td>${a.id}</td>
+<td>${a.name}</td>
+<td>${a.frames?.length || 0}</td>
+<td>
+<button class="btn" onclick="editAnimation(${idx})">编辑</button>
+<button class="btn btn-danger" onclick="deleteAnimation(${idx})">删除</button>
+</td></tr>`;
+  });
+  h += "</tbody></table>";
+  wrap.innerHTML = h;
+}
+
+function editAnimation(idx) {
+  const a = ProjectManager.currentProject.animations[idx];
+  currentEditAnimIndex = idx;
+  document.getElementById("animId").value = a.id;
+  document.getElementById("animName").value = a.name;
+  document.getElementById("animFrameDelay").value = a.frameDelay || 150;
+  animFrames = (a.frames || []).map(f => ({ src: f.src, img: null }));
+  refreshAnimFramePreview();
+  document.getElementById("animEditCard").style.display = "block";
+  animPreviewCanvas = document.getElementById("animPreviewCanvas");
+  animPreviewCtx = animPreviewCanvas.getContext("2d");
+  stopAnimPreview();
+}
+
+function deleteAnimation(idx) {
+  const a = ProjectManager.currentProject.animations[idx];
+  if (!confirm(`删除动画【${a.name}】?`)) return;
+  ProjectManager.currentProject.animations.splice(idx, 1);
+  ProjectManager.saveLocal();
+  renderAnimList();
+  log("动画", `删除：${a.name} | ID:${a.id}`);
+}
+
+// 后端配置上传函数
+async function publishConfigToBackend() {
+  const p = ProjectManager.currentProject;
+  if (!p) {
+    log("警告", "请先新建/打开项目！");
+    return;
+  }
+
+  const input = document.getElementById("backendApiUrlInput");
+  let baseUrl = "http://localhost:3000";
+  if (input) {
+    baseUrl = input.value.trim() || baseUrl;
+    localStorage.setItem("backendApiUrl", baseUrl);
+  }
+
+  const jsonRaw = ProjectManager.exportJson();
+  const statusDom = document.getElementById("publishBackendStatus");
+
+  try {
+    const resp = await fetch(`${baseUrl}/api/upload-config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: jsonRaw
+    });
+
+    const resData = await resp.json();
+
+    if (resData.ok) {
+      log("后端同步", `✅成功：${resData.msg || '配置已上传'}`);
+      if (statusDom) statusDom.innerHTML = `<span style="color:#4cd964">✅${resData.msg || '配置已上传'}</span>`;
+    } else {
+      log("后端同步", `❌失败：${resData.msg || '后端返回失败'}`);
+      if (statusDom) statusDom.innerHTML = `<span style="color:#ff5555">❌${resData.msg || '后端返回失败'}</span>`;
+    }
+  } catch (err) {
+    log("后端同步", `❌网络错误：${err.message}`);
+    if (statusDom) statusDom.innerHTML = `<span style="color:#ff5555">❌网络错误，无法连接后端</span>`;
+    console.error(err);
+  }
+}
+
+// 工具函数
+function downloadJson() {
+  const p = ProjectManager.currentProject;
+  if (!p) { alert("请先新建项目"); return; }
+  const blob = new Blob([ProjectManager.exportJson()], { type: "application/json" });
+  saveAs(blob, (p.name || "game-project") + ".json");
+  log("导出", "✅JSON配置已下载");
+}
+
+function importJsonFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      ProjectManager.loadFromJson(ev.target.result);
+      log("导入", "✅JSON配置已导入");
+    } catch (e) {
+      alert("JSON格式错误：" + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function refreshJsonPreview() {
+  const p = ProjectManager.currentProject;
+  if (!p) {
+    document.getElementById("jsonPreview").value = "";
+    return;
+  }
+  document.getElementById("jsonPreview").value = ProjectManager.exportJson();
+}
