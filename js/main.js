@@ -38,12 +38,10 @@ textarea,select{background:#242a3b;color:#fff;border:1px solid #384059;padding:8
 <button onclick="savePlayerData()">保存进度</button>
 <button class="danger" onclick="resetPlayer()">重置游戏存档</button>
 </div>
-
 <script>
 let gameData = null;
 let player = null;
 let battleTimer = null;
-
 async function loadGameData(){
   try{
     const res = await fetch("./game-data.json");
@@ -57,7 +55,6 @@ async function loadGameData(){
   startBattleLoop();
   renderUi();
 }
-
 function getDefaultPlayer(){
   const cfg = gameData.config;
   return {
@@ -94,7 +91,6 @@ function resetPlayer(){
   player = getDefaultPlayer();
   renderUi();
 }
-
 function getGoldPerSec(){
   const cfg = gameData.config;
   return cfg.baseGoldPerSec * Math.pow(player.level, cfg.levelRate||1.15);
@@ -110,7 +106,6 @@ function calcOfflineReward(){
   const goldAdd = sec * getGoldPerSec();
   player.gold += goldAdd;
 }
-
 function getMonsterById(id){
   return gameData.monsters.find(m=>m.id===id);
 }
@@ -129,10 +124,8 @@ function battleTick(){
   const mid = idList[player.battleIndex];
   const monster = getMonsterById(mid);
   if(!monster) return;
-
   const playerDmg = player.level * 8;
   const monsterDmg = monster.atk;
-
   if(playerDmg > monster.def){
     player.gold += monster.gold||0;
     player.exp += monster.exp||0;
@@ -154,7 +147,6 @@ function battleTick(){
   savePlayerData();
   renderUi();
 }
-
 function renderUi(){
   const cfg = gameData.config;
   const perSec = getGoldPerSec().toFixed(1);
@@ -198,16 +190,13 @@ document.getElementById("btnNextStage").onclick = function(){
   player.battleIndex = (player.battleIndex+1) % list.length;
   renderUi();
 };
-
 window.onload = loadGameData;
 </script>
 </body>
 </html>`;
-
 // 用户自定义AI游戏模板持久化
 let userCustomGameTemplate = "";
 const CUSTOM_TPL_STORAGE_KEY = "editor_custom_game_template";
-
 function loadCustomTemplateFromStorage(){
   const tpl = localStorage.getItem(CUSTOM_TPL_STORAGE_KEY) || "";
   userCustomGameTemplate = tpl;
@@ -228,14 +217,12 @@ function getActiveGameTemplate(){
   }
   return IDLE_GAME_TEMPLATE_HTML;
 }
-
 let currentEditItemIndex = -1;
 let currentEditNpcIndex = -1;
 let currentEditMonsterIndex = -1;
 let currentEditSkillIndex = -1;
 let currentEditMapIndex = -1;
 let currentEditAnimIndex = -1;
-
 let mapCanvas, mapCtx;
 let mapData = [];
 const tileSize = 24;
@@ -243,7 +230,6 @@ let animFrames = [];
 let animPreviewTimer = null;
 let animPreviewCanvas, animPreviewCtx;
 let selectedRowIndex = -1;
-
 function isIdDuplicate(arr, id, skipIndex = -1) {
   const tid = id.trim();
   for (let i = 0; i < arr.length; i++) {
@@ -263,7 +249,6 @@ function setSelectedRow(domWrap, idx) {
     trs[idx].classList.add("row-active");
   }
 }
-
 function renderEditorPanel(modId) {
   currentEditItemIndex = -1;
   currentEditNpcIndex = -1;
@@ -272,11 +257,9 @@ function renderEditorPanel(modId) {
   currentEditMapIndex = -1;
   currentEditAnimIndex = -1;
   selectedRowIndex = -1;
-
   const ed = document.getElementById("editor");
   let title = "";
   let bodyHtml = "";
-
   if (modId === "overview") {
     title = "项目概览";
     const prj = ProjectManager.currentProject;
@@ -593,7 +576,6 @@ function renderEditorPanel(modId) {
 <button class="btn" onclick="refreshJsonPreview()" style="margin-top:8px;">刷新预览</button>
 </div>
 </div>
-
 <div class="card">
 <div class="card-title">🎮 AI游戏模板管理</div>
 <p>将AI生成的完整单页面HTML游戏模板粘贴下方文本框，点击【应用此模板】。打包游戏将使用该模板，无需修改源码文件。</p>
@@ -605,16 +587,30 @@ function renderEditorPanel(modId) {
 <button class="btn btn-primary" onclick="applyCustomTemplate()">✅应用此模板</button>
 <button class="btn btn-danger" onclick="resetCustomTemplateUi()">🔄重置为系统默认模板</button>
 </div>
-<div style="margin-top:10px;color:var(--text-3);font-size:12px;">
+<div style="margin-top:10px;color:var(--text‑3);font-size:12px;">
 当前状态：<span id="tplStatusText">未使用自定义AI模板，使用系统内置模板</span>
 </div>
+</div>
+<div class="card">
+<div class="card-title">🌐 多人后端配置同步</div>
+<div class="form-grid">
+<div class="form-row full">
+<label>后端API地址</label>
+<input id="backendApiUrlInput" value="${localStorage.getItem('backendApiUrl')||'http://localhost:3000'}">
+</div>
+</div>
+<div class="btn-group" style="margin-top:12px">
+<button class="btn btn-primary" onclick="publishConfigToBackend()">📤发布配置到游戏后端</button>
+</div>
+<div id="publishBackendStatus" style="margin-top:8px;font-size:12px;"></div>
+<p style="margin-top:8px;font-size:12px;color:var(--text‑3)">
+修改怪物/技能/物品后，点击按钮热更新后端游戏配置；玩家刷新前端即可生效。
+</p>
 </div>`;
   }
-
   ed.innerHTML = `
 <div class="editor-header"><div class="editor-title">${title}</div><div></div></div>
 <div class="editor-body">${bodyHtml}</div>`;
-
   setTimeout(() => {
     if (modId === "item") renderItemList();
     if (modId === "npc") renderNpcList();
@@ -624,7 +620,6 @@ function renderEditorPanel(modId) {
     if (modId === "anim-list") renderAnimList();
   }, 60);
 }
-
 // 导出模块模板UI交互
 function applyCustomTemplate(){
   const tplText = document.getElementById("customTplInput").value;
@@ -641,7 +636,6 @@ function resetCustomTemplateUi(){
   document.getElementById("customTplInput").value = "";
   document.getElementById("tplStatusText").innerText = "未使用自定义AI模板，使用系统内置模板";
 }
-
 // 打包函数
 async function generateGameZip() {
   const p = ProjectManager.currentProject;
@@ -660,38 +654,30 @@ async function generateGameZip() {
   saveAs(blob, (p.name || "game_release") + ".zip");
   log("导出", "✅成品游戏ZIP打包完成，已经开始下载！");
 }
-
 function saveGameConfig() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "无打开项目"); return; }
   const c = p.config;
-
   c.gameTitle = document.getElementById("cf_gameTitle").value.trim();
   c.version = document.getElementById("cf_version").value.trim();
   c.bgColor = document.getElementById("cf_bgColor").value;
   c.maxLevel = Number(document.getElementById("cf_maxLevel").value);
-
   c.startLevel = Number(document.getElementById("cf_startLevel").value);
   c.startGold = Number(document.getElementById("cf_startGold").value);
   c.startHp = Number(document.getElementById("cf_startHp").value);
-
   c.baseGoldPerSec = Number(document.getElementById("cf_baseGoldPerSec").value);
   c.levelRate = Number(document.getElementById("cf_levelRate").value);
-
   c.battleTickMs = Number(document.getElementById("cf_battleTickMs").value);
   c.enableOffline = document.getElementById("cf_enableOffline").value === "true";
   c.maxOfflineSec = Number(document.getElementById("cf_maxOfflineSec").value);
   c.deathResetStage = document.getElementById("cf_deathResetStage").value === "true";
-
   const rawMonsterIds = document.getElementById("cf_battleMonsterIdList").value.split(",")
     .map(s=>s.trim())
     .filter(s=>s.length>0);
   c.battleMonsterIdList = rawMonsterIds;
-
   ProjectManager.saveLocal();
   log("配置", "游戏基础配置已保存（放置挂机参数已写入）");
 }
-
 //物品
 function openItemEditor() {
   currentEditItemIndex = -1;
@@ -707,7 +693,6 @@ function openItemEditor() {
   document.getElementById("itemEditCard").style.display = "block";
 }
 function closeItemEditor() { document.getElementById("itemEditCard").style.display = "none"; }
-
 function saveItem() {
   const p = ProjectManager.currentProject;
   if (!p) { log("警告", "请新建项目"); return; }
@@ -738,7 +723,6 @@ function saveItem() {
   closeItemEditor();
   renderItemList();
 }
-
 function filterItemList(keyword) { renderItemList(keyword); }
 function renderItemList(filter = "") {
   const wrap = document.getElementById("itemListWrap");
@@ -747,7 +731,6 @@ function renderItemList(filter = "") {
   const kw = filter.toLowerCase().trim();
   if (kw) list = arr.filter(x => x.id.toLowerCase().includes(kw) || x.name.toLowerCase().includes(kw));
   if (list.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无匹配物品</p>"; return; }
-
   let h = `<table style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>类型</th><th>售价</th><th>堆叠</th><th>操作</th></tr></thead><tbody>`;
   list.forEach((it, idx) => {
@@ -765,7 +748,6 @@ function renderItemList(filter = "") {
   h += "</tbody></table>";
   wrap.innerHTML = h;
 }
-
 function editItem(idx) {
   const it = ProjectManager.currentProject.items[idx];
   currentEditItemIndex = idx;
@@ -799,7 +781,6 @@ function duplicateItem() {
   log("物品", `复制生成副本 ID:${cp.id}`);
   renderItemList();
 }
-
 //NPC
 function openNpcEditor() {
   currentEditNpcIndex = -1;
@@ -883,7 +864,6 @@ function duplicateNpc() {
   ProjectManager.currentProject.npcs.push(cp); ProjectManager.saveLocal();
   log("NPC", `复制副本 ID:${cp.id}`); renderNpcList();
 }
-
 //怪物
 function openMonsterEditor() {
   currentEditMonsterIndex = -1;
@@ -976,7 +956,6 @@ function duplicateMonster() {
   ProjectManager.currentProject.monsters.push(cp); ProjectManager.saveLocal();
   log("怪物", `复制副本 ID:${cp.id}`); renderMonsterList();
 }
-
 //技能
 function openSkillEditor() {
   currentEditSkillIndex = -1;
@@ -1065,7 +1044,6 @@ function duplicateSkill() {
   ProjectManager.currentProject.skills.push(cp); ProjectManager.saveLocal();
   log("技能", `复制副本 ID:${cp.id}`); renderSkillList();
 }
-
 //地图
 function openMapCreator() {
   currentEditMapIndex = -1;
@@ -1165,7 +1143,6 @@ function deleteMap(idx) {
   ProjectManager.currentProject.maps.splice(idx, 1); ProjectManager.saveLocal(); renderMapList();
   log("地图", `删除：${m.name} | ID:${m.id}`);
 }
-
 //动画
 function openAnimCreator() {
   currentEditAnimIndex = -1;
@@ -1234,18 +1211,4 @@ function saveAnimation() {
   }
   if (currentEditAnimIndex === -1) { arr.push(d); log("动画", `新建：${d.name} | ID:${d.id}`); }
   else { arr[currentEditAnimIndex] = d; log("动画", `修改：${d.name} | ID:${d.id}`); }
-  ProjectManager.saveLocal(); closeAnimEditor(); renderAnimList();
-}
-function renderAnimList() {
-  const wrap = document.getElementById("animListWrap");
-  const arr = ProjectManager.currentProject?.animations || [];
-  if (arr.length === 0) { wrap.innerHTML = "<p class='empty-state'>暂无动画</p>"; return; }
-  let h = `<table style="width:100%;border-collapse:collapse;">
-<thead><tr style="background:var(--bg-3);"><th>ID</th><th>名称</th><th>帧数</th><th>操作</th></tr></thead><tbody>`;
-  arr.forEach((a, idx) => {
-    h += `<tr style="border-bottom:1px solid var(--border);">
-<td>${a.id}</td><td>${a.name}</td><td>${a.frames.length}</td>
-<td><button class="btn" onclick="editAnim(${idx})">编辑</button><button class="btn btn-danger" onclick="deleteAnim(${idx})">删除</button></td></tr>`;
-  });
-  h += "</tbody></table>"; wrap.innerHTML = h;
-}
+  Project
