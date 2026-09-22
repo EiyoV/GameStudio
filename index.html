@@ -14,9 +14,9 @@
     <div class="brand">
       <div class="brand-logo">
         <svg viewBox="0 0 24 24" width="22" height="22">
-          <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-          <circle cx="9" cy="12" r="1.6" fill="currentColor"/>
-          <circle cx="15" cy="12" r="1.6" fill="currentColor"/>
+          <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2" />
+          <circle cx="9" cy="12" r="1.6" fill="currentColor" />
+          <circle cx="15" cy="12" r="1.6" fill="currentColor" />
         </svg>
       </div>
       <div class="brand-text">
@@ -149,5 +149,49 @@
 
 <script src="js/core.js"></script>
 <script src="js/main.js"></script>
+<script>
+// =====================【新增：后端配置上传函数，完全不改动原有HTML布局】=====================
+// 默认后端地址
+let backendApiUrl = localStorage.getItem("backendApiUrl") || "http://localhost:3000";
+
+/**
+ * 发布当前项目全部配置到游戏后端接口 /api/upload-config
+ */
+async function publishConfigToBackend() {
+  const p = ProjectManager.currentProject;
+  if (!p) {
+    log("警告", "请先新建/打开项目！");
+    return;
+  }
+  const apiUrlInput = document.getElementById("backendApiUrlInput");
+  if(apiUrlInput){
+    backendApiUrl = apiUrlInput.value.trim();
+    localStorage.setItem("backendApiUrl", backendApiUrl);
+  }
+  const jsonRaw = ProjectManager.exportJson();
+  let statusDom = document.getElementById("publishBackendStatus");
+  try {
+    const resp = await fetch(`${backendApiUrl}/api/upload-config`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: jsonRaw
+    });
+    const resData = await resp.json();
+    if(resData.ok){
+      log("后端同步", `✅成功：${resData.msg}`);
+      if(statusDom) statusDom.innerHTML = `<span style="color:#4cd964">✅${resData.msg}</span>`;
+    }else{
+      log("后端同步", `❌失败：${resData.msg}`);
+      if(statusDom) statusDom.innerHTML = `<span style="color:#ff5555">❌${resData.msg}</span>`;
+    }
+  } catch (err) {
+    log("后端同步", `❌网络错误，请确认后端服务已经启动：${err.message}`);
+    if(statusDom) statusDom.innerHTML = `<span style="color:#ff5555">❌网络错误，无法连接后端</span>`;
+    console.error(err);
+  }
+}
+</script>
 </body>
 </html>
