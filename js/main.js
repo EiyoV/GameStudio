@@ -1247,4 +1247,5 @@ function renderAnimList() {
 <td>${a.id}</td><td>${a.name}</td><td>${a.frames.length}</td>
 <td><button class="btn" onclick="editAnim(${idx})">编辑</button><button class="btn btn-danger" onclick="deleteAnim(${idx})">删除</button></td></tr>`;
   });
-  h += "</tbody></table>"; wrap.innerHTML = h
+  h += "</tbody></table>"; wrap.innerHTML = h;
+}
